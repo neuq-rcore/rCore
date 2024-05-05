@@ -26,7 +26,8 @@ QEMU := qemu-system-$(ARCH)
 
 # alternative : 'opensbi' and 'rustsbi' 
 SBI_IMPL := rustsbi
-BOOTLOADER := binary/sbi/$(SBI_IMPL).bin
+BOARD_TYPE := qemu
+BOOTLOADER := ../bootloader/$(SBI_IMPL)-$(BOARD_TYPE).bin
 
 KERNEL_ENTRY_PA := 0x80200000
 
