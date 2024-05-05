@@ -29,7 +29,7 @@ impl core::fmt::Write for dyn Console {
 // End Region - Console
 
 use core::fmt::{Arguments, Write};
-use core::{arch::asm, panic};
+use core::panic;
 
 // Begin Region - LegacyConsole
 #[derive(Clone, Copy)]
