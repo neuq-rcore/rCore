@@ -4,7 +4,6 @@ on: [push]
 
 env:
   CARGO_TERM_COLOR: always
-  RUSTFLAGS: "-Dwarnings"
 
 permissions:
   contents: write
@@ -44,6 +43,9 @@ jobs:
         run: make run
 
   code-style:
+    env:
+      RUSTFLAGS: "-Dwarnings"
+
     runs-on: ubuntu-latest
 
     steps:
