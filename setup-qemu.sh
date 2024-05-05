@@ -1,7 +1,8 @@
 #!/bin/bash
 
 tmpdir=$(mktemp -d -p /tmp/)
-qemu="qemu-7.2.9"
+qemu="qemu"
+branch="stable-7.2"
 repo=$(pwd)
 
 echo "[!] Section: Setup ${qemu}"
@@ -10,10 +11,7 @@ echo "[!] Entering ${tmpdir}"
 cd "$tmpdir" || exit 1
 
 echo "[!] Fetching Qemu source code"
-wget "https://download.qemu.org/${qemu}.tar.xz"
-
-echo "[!] Extracting source code"
-tar xvf "${qemu}.tar.xz"
+git clone https://gitlab.com/qemu-project/qemu.git --depth=1 -b $branch $qemu
 
 echo "[!] Entering ${qemu}"
 cd "$qemu" || exit 1
