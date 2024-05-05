@@ -42,34 +42,17 @@ impl LegacyConsole {
     }
 }
 
-pub const LEGACY_PUTCHAR_EID: usize = 0x01;
-pub const LEGACY_GETCHAR_EID: usize = 0x02;
-
 impl Console for LegacyConsole {
     fn init(&mut self) {}
 
+    #[allow(deprecated)]
     fn getchar(&self) -> u8 {
-        let mut ret: u8;
-
-        unsafe {
-            asm!(
-                "ecall",
-                lateout("a0") ret,
-                in("a7") LEGACY_GETCHAR_EID,
-            );
-        }
-
-        ret
+        sbi_rt::legacy::console_getchar() as u8
     }
 
+    #[allow(deprecated)]
     fn putchar(&mut self, c: u8) {
-        unsafe {
-            asm!(
-                "ecall",
-                in("a0") c as usize,
-                in("a7") LEGACY_PUTCHAR_EID,
-            );
-        }
+        sbi_rt::legacy::console_putchar(c as usize);
     }
 }
 
