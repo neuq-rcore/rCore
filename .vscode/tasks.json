@@ -9,6 +9,9 @@
                 "kind": "none",
                 "isDefault": true
             },
+            "options": {
+                "cwd": "./os/",
+            },
             "isBackground": true,
             "presentation": {
                 "echo": true,
