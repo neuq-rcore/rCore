@@ -17,23 +17,26 @@ jobs:
       fail-fast: false
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Build
-      run: make -C ./os build
+      - name: Setup toolchains
+        run: rustup target add riscv64gc-unknown-none-elf --toolchain nightly
 
-      # Only run tests when successfully built
-    - name: Setup Qemu
-      run: bash setup-qemu.sh
+      - name: Build
+        run: make -C ./os build
 
-    - name: Run
-      run: make -C ./os run
+        # Only run tests when successfully built
+      - name: Setup Qemu
+        run: bash setup-qemu.sh
+
+      - name: Run
+        run: make -C ./os run
 
   code-style:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Cargo Clippy
-      run: cargo clippy --all-targets --all-features
+      - name: Cargo Clippy
+        run: cargo clippy --all-targets --all-features
