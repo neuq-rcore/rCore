@@ -23,6 +23,7 @@ jobs:
         run: |
           rustup toolchain install nightly  
           rustup target add riscv64gc-unknown-none-elf --toolchain nightly
+          rustup override set nightly
 
       - name: Build
         run: make -C ./os build
@@ -39,6 +40,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Setup toolchains
+        run: |
+          rustup toolchain install nightly  
+          rustup target add riscv64gc-unknown-none-elf --toolchain nightly
+          rustup override set nightly
 
       - name: Cargo Clippy
         run: make clippy
