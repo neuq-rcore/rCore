@@ -1,0 +1,67 @@
+name: Continuous Integration
+
+on: [push]
+
+env:
+  CARGO_TERM_COLOR: always
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cross build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-riscv64-linux-gnu
+          riscv64-linux-gnu-ld --version
+
+      - name: Setup toolchains
+        run: |
+          rustup toolchain install nightly
+          rustup target add riscv64gc-unknown-none-elf --toolchain nightly
+          rustup override set nightly
+          cargo install cargo-binutils
+          rustup component add llvm-tools-preview
+
+      - name: Build
+        run: make build
+
+        # Only run tests when successfully built
+      - name: Prepare dependenecies for building Qemu
+        run: sudo apt install -y autoconf automake autotools-dev curl libmpc-dev libmpfr-dev libgmp-dev gawk build-essential bison flex texinfo gperf libtool patchutils bc zlib1g-dev libexpat-dev git libglib2.0-dev libfdt-dev libpixman-1-dev libncurses5-dev libncursesw5-dev ninja-build
+
+      - name: Setup Qemu
+        run: bash setup-qemu.sh
+
+      - name: Run
+        run: make run
+
+  code-style:
+    env:
+      RUSTFLAGS: "-Dwarnings"
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup toolchains
+        run: |
+          rustup toolchain install nightly
+          rustup target add riscv64gc-unknown-none-elf --toolchain nightly
+          rustup override set nightly
+
+      - name: Install clippy
+        run: rustup component add clippy --toolchain nightly
+
+      - name: Cargo Clippy
+        run: make clippy
