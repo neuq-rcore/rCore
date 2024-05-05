@@ -21,19 +21,19 @@ jobs:
 
       - name: Setup toolchains
         run: |
-          rustup toolchain install nightly  
+          rustup toolchain install nightly
           rustup target add riscv64gc-unknown-none-elf --toolchain nightly
           rustup override set nightly
 
       - name: Build
-        run: make -C ./os build
+        run: make build
 
         # Only run tests when successfully built
       - name: Setup Qemu
         run: bash setup-qemu.sh
 
       - name: Run
-        run: make -C ./os run
+        run: make run
 
   code-style:
     runs-on: ubuntu-latest
@@ -43,9 +43,14 @@ jobs:
 
       - name: Setup toolchains
         run: |
-          rustup toolchain install nightly  
+          rustup toolchain install nightly
           rustup target add riscv64gc-unknown-none-elf --toolchain nightly
           rustup override set nightly
+          cargo install cargo-binutils
+          rustup component add llvm-tools-preview
+
+      - name: Install clippy
+        run: rustup component add clippy --toolchain nightly
 
       - name: Cargo Clippy
         run: make clippy
