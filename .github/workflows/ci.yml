@@ -37,7 +37,7 @@ jobs:
 
         # Only run tests when successfully built
       - name: Setup Qemu
-        run: sudo apt install -y qemu-efi-riscv64
+        run: sudo apt install -y qemu-system-misc
 
       - name: Run
         run: make run
