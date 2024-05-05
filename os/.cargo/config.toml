@@ -3,5 +3,6 @@ target = "riscv64gc-unknown-none-elf"
 
 [target.riscv64gc-unknown-none-elf]
 rustflags = [
-	"-Clink-arg=-Tsrc/linker-qemu.ld", "-Cforce-frame-pointers=yes"
+	"-C", "link-arg=-Tsrc/linker-qemu.ld", 
+	"-C", "force-frame-pointers=yes"
 ]
