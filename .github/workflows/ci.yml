@@ -39,4 +39,4 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Cargo Clippy
-        run: cargo clippy --all-targets --all-features
+        run: make clippy
