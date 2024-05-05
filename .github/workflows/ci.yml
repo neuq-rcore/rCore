@@ -19,6 +19,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install cross build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-riscv64-linux-gnu
+          riscv64-linux-gnu-ld --version
+
       - name: Setup toolchains
         run: |
           rustup toolchain install nightly
