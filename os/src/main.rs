@@ -3,7 +3,6 @@
 #![feature(panic_info_message)]
 
 use core::arch::global_asm;
-
 use sbi::shutdown;
 
 #[macro_use]
@@ -15,6 +14,7 @@ mod stack_trace;
 mod sync;
 pub mod syscall;
 pub mod trap;
+mod logging;
 
 global_asm!(include_str!("entry.asm"));
 global_asm!(include_str!("link_app.S"));
@@ -28,12 +28,48 @@ fn main() {
 unsafe extern "C" fn __kernel_start_main() -> ! {
     clear_bss();
 
+    logging::init();
+
+    debug_env();
+
     trap::init();
     batch::init();
 
     main();
 
     shutdown(false);
+}
+
+fn debug_env() {
+    use log::debug;
+    use crate::sbi::console::UnionConsole;
+    use sbi_spec::base::impl_id;
+
+    debug!(
+        "[INFO] SBI specification version: {0}",
+        sbi_rt::get_spec_version()
+    );
+
+    let sbi_impl = sbi_rt::get_sbi_impl_id();
+    let sbi_impl = match sbi_impl {
+        impl_id::BBL => "Berkley Bootloader",
+        impl_id::OPEN_SBI => "OpenSBI",
+        impl_id::XVISOR => "Xvisor",
+        impl_id::KVM => "Kvm",
+        impl_id::RUST_SBI => "RustSBI",
+        impl_id::DIOSIX => "Diosix",
+        impl_id::COFFER => "Coffer",
+        _ => "Unknown",
+    };
+
+    debug!("[INFO] SBI implementation: {0}", sbi_impl);
+
+    let console_type = match UnionConsole::instance() {
+        UnionConsole::Legacy(_) => "Legacy",
+        UnionConsole::Dbcn(_) => "DBCN",
+    };
+
+    debug!("[INFO] Console type: {0}", console_type);
 }
 
 unsafe fn clear_bss() {
