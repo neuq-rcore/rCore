@@ -3,6 +3,10 @@ pub fn console_putchar(c: usize) {
     sbi_rt::legacy::console_putchar(c);
 }
 
+pub fn set_timer(timer: usize) {
+    sbi_rt::set_timer(timer as _);
+}
+
 pub fn shutdown(failure: bool) -> ! {
     use sbi_rt::{system_reset, NoReason, Shutdown, SystemFailure};
     if !failure {
@@ -10,5 +14,5 @@ pub fn shutdown(failure: bool) -> ! {
     } else {
         system_reset(Shutdown, SystemFailure);
     }
-    unreachable!();
+    unreachable!()
 }
