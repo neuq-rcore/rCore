@@ -11,7 +11,7 @@ echo "[!] Entering ${tmpdir}"
 cd "$tmpdir" || exit 1
 
 echo "[!] Fetching Qemu source code"
-git clone https://gitlab.com/qemu-project/qemu.git --depth=1 -b $branch $qemu
+git clone https://github.com/qemu/qemu.git --depth=1 -b $branch $qemu
 
 echo "[!] Entering ${qemu}"
 cd "$qemu" || exit 1
