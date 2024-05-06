@@ -15,11 +15,11 @@ struct UserStack {
 }
 
 static KERNEL_STACK: [KernelStack; MAX_APP_NUM] = [KernelStack {
-    data: [0; KERNEL_STACK_SIZE]
+    data: [0; KERNEL_STACK_SIZE],
 }; MAX_APP_NUM];
 
 static USER_STACK: [UserStack; MAX_APP_NUM] = [UserStack {
-    data: [0; USER_STACK_SIZE]
+    data: [0; USER_STACK_SIZE],
 }; MAX_APP_NUM];
 
 impl KernelStack {
@@ -50,7 +50,7 @@ pub fn get_num_app() -> usize {
     extern "C" {
         fn _num_app();
     }
-    unsafe {  (_num_app as usize as *const usize).read_volatile() }
+    unsafe { (_num_app as usize as *const usize).read_volatile() }
 }
 
 pub fn load_apps() {

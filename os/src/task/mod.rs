@@ -19,7 +19,7 @@ pub struct TaskManager {
     inner: UPSafeCell<TaskManagerInner>,
 }
 
-struct TaskManagerInner {
+pub struct TaskManagerInner {
     tasks: [TaskControlBlock; MAX_APP_NUM],
     current_task: usize,
 }
@@ -49,7 +49,7 @@ lazy_static! {
 }
 
 impl TaskManager {
-    fn run_first_task(&self) {
+    fn run_first_task(&self) -> ! {
         let mut inner = self.inner.exclusive_access();
         let task0 = &mut inner.tasks[0];
         task0.task_status = TaskStatus::Running;
@@ -62,7 +62,7 @@ impl TaskManager {
         panic!("unreachable in run_first_task!");
     }
 
-    fn mark_current_suspend(&self) {
+    fn mark_current_suspended(&self) {
         let mut inner = self.inner.exclusive_access();
         let current = inner.current_task;
         inner.tasks[current].task_status = TaskStatus::Ready;
@@ -110,7 +110,7 @@ fn run_next_task() {
 }
 
 fn mark_current_suspended() {
-    TASK_MANAGER.mark_current_suspend();
+    TASK_MANAGER.mark_current_suspended();
 }
 
 fn mark_current_exited() {
