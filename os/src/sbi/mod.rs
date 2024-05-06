@@ -1,4 +1,5 @@
 mod system;
+mod qemu;
 
 pub mod console;
 pub use system::shutdown as shutdown;
