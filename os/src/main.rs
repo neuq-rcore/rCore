@@ -2,26 +2,32 @@
 #![no_std]
 #![feature(panic_info_message)]
 
-use core::arch::global_asm;
+use core::{arch::global_asm, slice};
 use sbi::shutdown;
+
+#[path = "boards/qemu.rs"]
+mod board;
 
 #[macro_use]
 pub mod stdio;
-pub mod batch;
+mod config;
 mod lang_items;
+mod loader;
+mod logging;
 mod sbi;
 mod stack_trace;
 mod sync;
 pub mod syscall;
+pub mod task;
+mod timer;
 pub mod trap;
-mod logging;
 
 global_asm!(include_str!("entry.asm"));
 global_asm!(include_str!("link_app.S"));
 
 #[no_mangle]
 fn main() {
-    batch::run_next_app();
+    task::run_first_task();
 }
 
 #[no_mangle]
@@ -33,7 +39,9 @@ unsafe extern "C" fn __kernel_start_main() -> ! {
     debug_env();
 
     trap::init();
-    batch::init();
+    loader::load_apps();
+    trap::enable_timer_interrupt();
+    timer::set_next_trigger();
 
     main();
 
@@ -41,9 +49,11 @@ unsafe extern "C" fn __kernel_start_main() -> ! {
 }
 
 fn debug_env() {
-    use log::debug;
     use crate::sbi::console::UnionConsole;
+    use log::debug;
     use sbi_spec::base::impl_id;
+
+    debug!("[kernel] Hello, world!");
 
     debug!(
         "[INFO] SBI specification version: {0}",
@@ -78,6 +88,9 @@ unsafe fn clear_bss() {
         fn ebss();
     }
 
-    core::slice::from_raw_parts_mut(sbss as usize as *mut u8, ebss as usize - sbss as usize)
-        .fill(0);
+    let ptr = sbss as *mut u8;
+    let len = ebss as usize - sbss as usize;
+
+    let bss = slice::from_raw_parts_mut(ptr, len);
+    bss.fill(0);
 }
