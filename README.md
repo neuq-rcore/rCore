@@ -39,7 +39,7 @@ make connect
 ```
 
 ### VSCode
-Open the repository in VSCode and press `F5` to start debugging.
+Open the repository in VSCode and press <kbd>F5</kbd> to start debugging.
 
 ## License
 
