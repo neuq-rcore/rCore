@@ -25,7 +25,7 @@ GDB := $(ARCH)-elf-gdb
 QEMU := qemu-system-$(ARCH)
 
 # alternative : 'opensbi' and 'rustsbi' 
-SBI_IMPL := rustsbi
+SBI_IMPL := opensbi
 BOARD_TYPE := qemu
 BOOTLOADER := ../bootloader/$(SBI_IMPL)-$(BOARD_TYPE).bin
 
