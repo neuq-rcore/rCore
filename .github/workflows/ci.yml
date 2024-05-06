@@ -42,7 +42,7 @@ jobs:
           qemu-system-riscv64 --version
 
       - name: Run
-        run: make run
+        run: make run LOG=TRACE
 
   code-style:
     env:
