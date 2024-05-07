@@ -1,6 +1,6 @@
 #![no_main]
 #![no_std]
-#![feature(panic_info_message)]
+#![feature(panic_info_message, slice_from_ptr_range)]
 
 use core::{arch::global_asm, slice};
 use sbi::shutdown;
@@ -88,9 +88,5 @@ unsafe fn clear_bss() {
         fn ebss();
     }
 
-    let ptr = sbss as *mut u8;
-    let len = ebss as usize - sbss as usize;
-
-    let bss = slice::from_raw_parts_mut(ptr, len);
-    bss.fill(0);
+    slice::from_mut_ptr_range(sbss as *mut u8..ebss as *mut u8).fill(0);
 }
