@@ -1,18 +1,17 @@
-# Building
+# Region // Build
+OUTPUT_NAME = os
+
+CARGO := cargo
+CARGO_FLAGS :=
+MODE := debug
 TARGET := riscv64gc-unknown-none-elf
-MODE := release
-KERNEL_ELF := target/$(TARGET)/$(MODE)/os
+KERNEL_ELF := target/$(TARGET)/$(MODE)/$(OUTPUT_NAME)
 KERNEL_BIN := $(KERNEL_ELF).bin
-DISASM_TMP := target/$(TARGET)/$(MODE)/asm
 
-# BOARD
-BOARD := qemu
-SBI ?= rustsbi
-BOOTLOADER := ../bootloader/$(SBI)-$(BOARD).bin
+OBJCOPY := rust-objcopy --binary-architecture=riscv64
 
-# Building mode argument
 ifeq ($(MODE), release)
-	MODE_ARG := --release
+	CARGO_FLAGS += --release
 endif
 
 # End Region // Build
@@ -32,62 +31,40 @@ BOOTLOADER := ../bootloader/$(SBI_IMPL)-$(BOARD_TYPE).bin
 
 KERNEL_ENTRY_PA := 0x80200000
 
-# Binutils
-OBJDUMP := rust-objdump --arch-name=riscv64
-OBJCOPY := rust-objcopy --binary-architecture=riscv64
-
-# Disassembly
-DISASM ?= -x
-
-build: env $(KERNEL_BIN)
-
-env:
-	(rustup target list | grep "riscv64gc-unknown-none-elf (installed)") || rustup target add $(TARGET)
-	cargo install cargo-binutils
-	rustup component add rust-src
-	rustup component add llvm-tools-preview
-
-$(KERNEL_BIN): kernel
-	@$(OBJCOPY) $(KERNEL_ELF) --strip-all -O binary $@
-
-kernel:
-	@cd ../user && make build
-	@echo Platform: $(BOARD)
-	@cp src/linker-$(BOARD).ld src/linker.ld
-	@cargo build $(MODE_ARG)
-	@rm src/linker.ld
-
-clean:
-	@cargo clean
-
-disasm: kernel
-	@$(OBJDUMP) $(DISASM) $(KERNEL_ELF) | less
-
-disasm-vim: kernel
-	@$(OBJDUMP) $(DISASM) $(KERNEL_ELF) > $(DISASM_TMP)
-	@vim $(DISASM_TMP)
-	@rm $(DISASM_TMP)
-
-run: run-inner
-
 QEMU_ARGS := -machine virt \
 			 -nographic \
 			 -bios $(BOOTLOADER) \
 			 -device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
+# End Region // Board
 
-run-inner: build
-	@qemu-system-riscv64 $(QEMU_ARGS)
+all: build
+
+build: build-app
+	@echo '[+] Building os kernel'
+	$(CARGO) build $(CARGO_FLAGS)
+	@$(OBJCOPY) --strip-all $(KERNEL_ELF) $(KERNEL_BIN)
+
+build-app:
+	@echo '[+] Building user applications'
+	@cd ../user && make build
+
+run: build
+	@$(QEMU) $(QEMU_ARGS)
 
 debug: build
-	@tmux new-session -d \
-		"qemu-system-riscv64 $(QEMU_ARGS) -s -S" && \
-		tmux split-window -h "riscv64-unknown-elf-gdb -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'" && \
-		tmux -2 attach-session -d
+	@echo '[!] Waiting for debugger'
+	@$(QEMU) $(QEMU_ARGS) -s -S
 
-gdbserver: build
-	@qemu-system-riscv64 $(QEMU_ARGS) -s -S
+gdb: connect
 
-gdbclient:
-	@riscv64-unknown-elf-gdb -ex 'file $(KERNEL_ELF)' -ex 'set arch riscv:rv64' -ex 'target remote localhost:1234'
+connect:
+	@$(GDB) -ex 'file $(KERNEL_ELF)' \
+		-ex 'set arch riscv:rv64' \
+		-ex 'target remote localhost:1234' \
+		-ex 'layout src'
 
-.PHONY: build env kernel clean disasm disasm-vim run-inner gdbserver gdbclient
+help:
+	@echo '- make build   : Build os kernel'
+	@echo '- make run     : Run os kernel with qemu'
+	@echo '- make debug   : Launch the os with qemu and wait for gdb'
+	@echo '- make connect : Launch gdb and connect to qemu'

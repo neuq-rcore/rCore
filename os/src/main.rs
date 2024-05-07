@@ -1,8 +1,11 @@
 #![no_main]
 #![no_std]
-#![feature(panic_info_message)]
+#![feature(panic_info_message, slice_from_ptr_range, naked_functions)]
 
-use core::{arch::global_asm, slice};
+use core::{
+    arch::{asm, global_asm},
+    slice,
+};
 use sbi::shutdown;
 
 #[path = "boards/qemu.rs"]
@@ -28,6 +31,19 @@ global_asm!(include_str!("link_app.S"));
 #[no_mangle]
 fn main() {
     task::run_first_task();
+}
+
+#[naked]
+#[no_mangle]
+#[link_section = ".text.entry"]
+unsafe extern "C" fn _start() -> ! {
+    asm!(
+        "la sp, boot_stack_top",
+        // # Make fp 0 so that stack trace knows where to stop
+        "xor fp, fp, fp",
+        "j __kernel_start_main", 
+        options(noreturn)
+    );
 }
 
 #[no_mangle]
@@ -88,9 +104,5 @@ unsafe fn clear_bss() {
         fn ebss();
     }
 
-    let ptr = sbss as *mut u8;
-    let len = ebss as usize - sbss as usize;
-
-    let bss = slice::from_raw_parts_mut(ptr, len);
-    bss.fill(0);
+    slice::from_mut_ptr_range(sbss as *mut u8..ebss as *mut u8).fill(0);
 }
