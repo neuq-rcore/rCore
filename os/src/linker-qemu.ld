@@ -33,6 +33,11 @@ SECTIONS
     edata = .;
     .bss : {
         *(.bss.stack)
+        PROVIDE(boot_stack_bottom = .);
+        . = ALIGN(4K);
+        . += 0x00080000;
+        . = ALIGN(4K);
+        PROVIDE(boot_stack_top = .);
         sbss = .;
         *(.bss .bss.*)
         *(.sbss .sbss.*)
