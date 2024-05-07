@@ -9,12 +9,12 @@ pub unsafe fn print_stack_trace() {
 
     println!("== Begin stack trace ==");
     while !fp.is_null() && saved_fp != 0 {
-        saved_ra = *fp.sub(1);
-        saved_fp = *fp.sub(2);
-
         println!("0x{:016x}, fp = 0x{:016x}", saved_ra, saved_fp);
 
         fp = saved_fp as *const usize;
+
+        saved_ra = *fp.sub(1);
+        saved_fp = *fp.sub(2);
     }
     println!("== End stack trace ==");
 }
