@@ -3,6 +3,8 @@
 	.global _start
 _start:
 	la sp, boot_stack_top
+	# Make fp 0 so that stack trace knows where to stop
+	xor fp, fp, fp
 	j __kernel_start_main
 
 .section .bss.stack
