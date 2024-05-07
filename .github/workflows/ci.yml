@@ -64,3 +64,22 @@ jobs:
 
       - name: Cargo Clippy
         run: make clippy
+
+  format-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup toolchains
+        run: |
+          rustup toolchain install nightly
+          rustup target add riscv64gc-unknown-none-elf --toolchain nightly
+          rustup override set nightly
+
+      - name: Install rustfmt
+        run: rustup component add rustfmt --toolchain nightly
+
+        # Only run format check in kernel crate Since user crate will be removed in the future
+      - name: Format check
+        run: cd os && cargo fmt --check
