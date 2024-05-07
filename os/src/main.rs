@@ -37,8 +37,10 @@ fn main() {
 #[link_section = ".text.entry"]
 unsafe extern "C" fn _start() -> ! {
     asm!(
-        "la sp, boot_stack_top",
-        // # Make fp 0 so that stack trace knows where to stop
+        // The tmp stack is only used to boot up the kernel
+        // The kernel will use `Kernel Stack` managed by the task/batch system once we started batch/task system
+        "la sp, tmp_stack_top",
+        // Make fp 0 so that stack trace knows where to stop
         "xor fp, fp, fp",
         "j __kernel_start_main",
         options(noreturn)
