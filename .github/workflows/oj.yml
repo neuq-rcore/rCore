@@ -1,0 +1,66 @@
+name: OJ Simulation
+
+on: [push]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      QEMU_OUTPUT: "output.log"
+      RAW_RESULT: "results.json"
+      ARTIFACT_DIR: "output"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y gcc-riscv64-linux-gnu qemu-system-misc
+          riscv64-linux-gnu-ld --version
+          qemu-system-riscv64 --version
+
+      - name: Setup toolchains
+        run: |
+          rustup toolchain install nightly
+          rustup target add riscv64gc-unknown-none-elf --toolchain nightly
+          rustup override set nightly
+          cargo install cargo-binutils
+          rustup component add llvm-tools-preview
+
+      # The OJ of the contest only run `make` to build the os
+      - name: Build os kernel
+        run: make
+
+      - name: Prepare SDcard image
+        run: mv test/sdcard.img .
+
+      - name: Run Qemu test
+        run: |
+          qemu-system-riscv64 -machine virt \
+            -m 128M -nographic -smp 2 \
+            -kernel kernel-qemu \
+            -bios sbi-qemu \
+            -drive file=sdcard.img,if=none,format=raw,id=x0 \
+            -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
+            -device virtio-net-device,netdev=net \
+            -netdev user,id=net | tee ${{ env.QEMU_OUTPUT }}
+
+      - name: Judge test result
+        run: python3 test/check_result/test_runner.py ${{ env.QEMU_OUTPUT }} > ${{ env.RAW_RESULT }}
+
+      - name: Visualize test result
+        run: python3 test/visualize_result.py ${{ env.RAW_RESULT }}
+
+      - name: Prepare to upload artifact
+        run: |
+          mkdir ${{ env.ARTIFACT_DIR }}
+          mv ${{ env.QEMU_OUTPUT }} ${{ env.ARTIFACT_DIR }}
+          mv ${{ env.RAW_RESULT }} ${{ env.ARTIFACT_DIR }}
+
+      - uses: actions/upload-artifact@v4.3.3
+        with: 
+          path: ${{ env.ARTIFACT_DIR }}
