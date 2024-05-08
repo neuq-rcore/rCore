@@ -17,7 +17,7 @@ def get_prefix(status: int):
         return "\033[32mPassed\033[0m"
 
 def visualize(data):
-    total_tests = 0
+    total_tests = len(data)
     failed = 0
     skiped = 0
     passed = 0
@@ -25,8 +25,6 @@ def visualize(data):
     total_scores = 0
     score = 0
     for test in data:
-        total_tests += 1
-
         name = test['name']
         num_total = test['all']
         num_passed = test['passed']
