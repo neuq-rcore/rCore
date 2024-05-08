@@ -1,8 +1,10 @@
 .PHONY: clippy clippy-% all test
 
 all:
-	@echo -e '\e[31mNOT IMPLEMENTED!\e[0m'
-	@exit 1
+	@cd os && make -s release
+
+	@cp os/target/riscv64gc-unknown-none-elf/release/os.bin kernel-qemu
+	@cp bootloader/opensbi-qemu.bin sbi-qemu
 
 clippy: clippy-user clippy-os
 
@@ -21,7 +23,8 @@ test: all
         -device virtio-net-device,netdev=net \
         -netdev user,id=net | tee output.log
 
-	@python3 test/check_result/test_runner.py output.log > results.json
+# the test scripts produce 'SyntaxWarning: invalid escape sequence'
+	@python3 -W ignore test/check_result/test_runner.py output.log > results.json
 	@python3 test/visualize_result.py results.json
 
 %:
