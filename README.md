@@ -35,6 +35,7 @@ make test
 这将模拟比赛的评测环境，首先执行`make all`，然后使用要求的 Qemu 启动参数挂载测试样例并运行内核进行测试。运行结束后，测试脚本`test/visualize_result.py`将会生成测试结果的可视化报告。
 
 下面是生成的可视化报告的一个例子：
+
 ![](./test/visual_report.png)
 
 对于每个测试，

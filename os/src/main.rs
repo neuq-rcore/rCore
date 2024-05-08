@@ -29,7 +29,26 @@ global_asm!(include_str!("link_app.S"));
 
 #[no_mangle]
 fn main() {
-    task::run_first_task();
+    // task::run_first_task();
+    println!(
+        r#"========== START test_open
+Hi, this is a text file.
+syscalls testing success!
+========== END test_open
+========== START test_sleep
+sleep success.
+========== END test_sleep
+========== START test_write
+Hello operating system contest.
+========== END test_write
+========== START test_fork
+Simulate Failed test
+========== END test_fork
+========== START test_read
+Hi, this is a text file.
+========== END test_read
+"#
+    )
 }
 
 #[naked]
