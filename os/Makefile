@@ -39,6 +39,19 @@ QEMU_ARGS := -machine virt \
 
 all: build
 
+release: release-pre release-inner
+
+release-pre:
+CARGO_FLAGS := --release
+MODE := release
+KERNEL_ELF := target/$(TARGET)/$(MODE)/$(OUTPUT_NAME)
+KERNEL_BIN := $(KERNEL_ELF).bin
+
+release-inner:
+	@echo '[+] Building os kernel(release)'
+	$(CARGO) build $(CARGO_FLAGS)
+	@$(OBJCOPY) --strip-all $(KERNEL_ELF) $(KERNEL_BIN)
+
 build: build-app
 	@echo '[+] Building os kernel'
 	$(CARGO) build $(CARGO_FLAGS)
