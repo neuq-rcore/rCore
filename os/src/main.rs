@@ -1,12 +1,20 @@
 #![no_main]
 #![no_std]
-#![feature(panic_info_message, slice_from_ptr_range, naked_functions)]
+#![feature(
+    panic_info_message,
+    slice_from_ptr_range,
+    naked_functions,
+    alloc_error_handler
+)]
 
 use core::{
     arch::{asm, global_asm},
     slice,
 };
+use mem::heap;
 use sbi::shutdown;
+
+extern crate alloc;
 
 #[path = "boards/qemu.rs"]
 mod board;
@@ -14,9 +22,11 @@ mod board;
 #[macro_use]
 pub mod stdio;
 mod config;
+mod fat32;
 mod lang_items;
 mod loader;
 mod logging;
+mod mem;
 mod sbi;
 mod stack_trace;
 mod sync;
@@ -50,15 +60,17 @@ unsafe extern "C" fn _start() -> ! {
 #[no_mangle]
 unsafe extern "C" fn __kernel_start_main() -> ! {
     clear_bss();
-
     logging::init();
 
-    debug_env();
+    // heap initlization depends on logging
+    heap::init();
 
     trap::init();
     loader::load_apps();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
+
+    debug_env();
 
     main();
 
@@ -70,7 +82,7 @@ fn debug_env() {
     use log::debug;
     use sbi_spec::base::impl_id;
 
-    debug!("[kernel] Hello, world!");
+    debug!("[kernel] Hello,init() world!");
 
     debug!(
         "[INFO] SBI specification version: {0}",

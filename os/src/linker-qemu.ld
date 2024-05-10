@@ -32,6 +32,7 @@ SECTIONS
     . = ALIGN(4K);
     edata = .;
     .bss : {
+        *(.bss.heap)
         *(.bss.stack)
         PROVIDE(tmp_stack_bottom = .);
         . = ALIGN(4K);

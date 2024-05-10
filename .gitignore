@@ -1,1 +1,6 @@
 /target
+sbi-qemu
+kernel-qemu
+output.log
+results.json
+sdcard.img
