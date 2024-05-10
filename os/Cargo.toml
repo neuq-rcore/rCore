@@ -12,6 +12,7 @@ sbi-spec = "0.0.7"
 fatfs = { git = "https://github.com/neuq-rcore/rust-fatfs", default-features = false }
 virtio-drivers = { git = "https://github.com/rcore-os/virtio-drivers", rev = "4ee80e5" }
 buddy_system_allocator = { git = "https://github.com/neuq-rcore/buddy_system_allocator" }
+bitflags = { git = "https://github.com/neuq-rcore/bitflags" }
 
 [profile.release]
 debug = true

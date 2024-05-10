@@ -8,12 +8,12 @@
 )]
 
 use core::{
-    arch::{asm, global_asm},
-    slice,
+    arch::{asm, global_asm}, slice
 };
-use mem::heap;
+
 use sbi::shutdown;
 
+#[macro_use]
 extern crate alloc;
 
 #[path = "boards/qemu.rs"]
@@ -26,7 +26,6 @@ mod fat32;
 mod lang_items;
 mod loader;
 mod logging;
-mod mem;
 mod sbi;
 mod stack_trace;
 mod sync;
@@ -34,6 +33,7 @@ pub mod syscall;
 pub mod task;
 mod timer;
 pub mod trap;
+mod mm;
 
 global_asm!(include_str!("link_app.S"));
 
@@ -63,7 +63,7 @@ unsafe extern "C" fn __kernel_start_main() -> ! {
     logging::init();
 
     // heap initlization depends on logging
-    heap::init();
+    mm::init();
 
     trap::init();
     loader::load_apps();
