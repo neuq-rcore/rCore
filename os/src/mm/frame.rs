@@ -53,7 +53,7 @@ pub fn frame_alloc() -> Option<TrackedFrame> {
         .map(|ppn| TrackedFrame::new(ppn.into()))
 }
 
-fn frame_dealloc(ppn: PhysPageNum) {
+pub fn frame_dealloc(ppn: PhysPageNum) {
     FRAME_ALLOCATOR.exclusive_access().dealloc(ppn);
 }
 

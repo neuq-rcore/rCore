@@ -3,7 +3,7 @@ use core::panic;
 use alloc::vec::Vec;
 
 use super::{
-    address::{PhysPageNum, VirtPageNum},
+    address::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum},
     frame::{frame_alloc, TrackedFrame},
 };
 use bitflags::*;
@@ -40,7 +40,7 @@ impl PageTable {
             Some(entry) => {
                 assert!(entry.is_valid()); // The page should be mapped
                 *entry = PageTableEntry::empty();
-            },
+            }
             None => panic!("unmap a unmapped page"),
         }
     }
@@ -72,7 +72,7 @@ impl PageTable {
         entry
     }
 
-    pub fn get_create_entry(& mut self, vpn: VirtPageNum) -> &mut PageTableEntry {
+    pub fn get_create_entry(&mut self, vpn: VirtPageNum) -> &mut PageTableEntry {
         let indices = vpn.into_indices();
         let mut ppn = self.root_ppn;
 
@@ -107,12 +107,25 @@ impl PageTable {
         self.get_entry(vpn).map(|entry| *entry)
     }
 
+    pub fn translate_va(&self, va: VirtAddr) -> Option<PhysAddr> {
+        self.get_entry(va.clone().floor()).map(|pte| {
+            let aligned_pa: PhysAddr = pte.ppn().into();
+            let offset = va.page_offset();
+            let aligned_pa_usize: usize = aligned_pa.into();
+            (aligned_pa_usize + offset).into()
+        })
+    }
+
     pub fn from_token(stap: usize) -> Self {
         let root_ppn = PhysPageNum(stap & ((1 << 44) - 1));
         Self {
             root_ppn,
             frames: Vec::new(),
         }
+    }
+
+    pub fn token(&self) -> usize {
+        8usize << 60 | self.root_ppn.0
     }
 }
 

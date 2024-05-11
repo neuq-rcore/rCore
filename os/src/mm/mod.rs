@@ -3,16 +3,19 @@ pub mod frame;
 pub mod heap;
 pub mod page;
 
-use alloc::{collections::BTreeMap, vec::Vec};
+use crate::{boards::MMIO, config::TRAMPOLINE, sync::UPSafeCell};
+use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
 use core::{ops::Range, str};
+use log::debug;
 use page::PageTable;
 
 use bitflags::bitflags;
+use lazy_static::lazy_static;
 
-use crate::config::PAGE_SIZE;
+use crate::config::{MEMORY_END, PAGE_SIZE};
 
 use self::{
-    address::{PhysPageNum, VirtAddr, VirtPageNum},
+    address::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum},
     frame::{frame_alloc, TrackedFrame},
     page::PageTableEntryFlags,
 };
@@ -68,6 +71,10 @@ impl MemorySpace {
             page_table: PageTable::new(),
             areas: Vec::new(),
         }
+    }
+
+    pub fn token(&self) -> usize {
+        self.page_table.token()
     }
 
     fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
@@ -165,5 +172,172 @@ impl MapArea {
             copied += PAGE_SIZE;
             vpn += 1;
         }
+    }
+}
+
+pub struct KernelSpace;
+
+impl KernelSpace {
+    pub fn new() -> MemorySpace {
+        extern "C" {
+            fn skernel();
+
+            fn stext();
+            fn etext();
+
+            fn srodata();
+            fn erodata();
+
+            fn sdata();
+            fn edata();
+
+            fn sbss();
+            fn ebss();
+
+            fn ekernel();
+        }
+
+        let mut kernel_space = MemorySpace::new_empty();
+
+        Self::map_trampoline(&mut kernel_space);
+
+        debug!(
+            "[Kernel] Mapping .text, {:016X}..{:016X}",
+            stext as usize, etext as usize
+        );
+        kernel_space.push(
+            MapArea::new(
+                VirtAddr(stext as usize),
+                VirtAddr(etext as usize),
+                MapType::Identical,
+                MapPermission::R | MapPermission::X,
+            ),
+            Option::None,
+        );
+
+        debug!(
+            "[Kernel] Mapping .rodata, {:016X}..{:016X}",
+            srodata as usize, erodata as usize
+        );
+        kernel_space.push(
+            MapArea::new(
+                VirtAddr(srodata as usize),
+                VirtAddr(erodata as usize),
+                MapType::Identical,
+                MapPermission::R,
+            ),
+            Option::None,
+        );
+
+        debug!(
+            "[Kernel] Mapping .data, {:016X}..{:016X}",
+            sdata as usize, edata as usize
+        );
+        kernel_space.push(
+            MapArea::new(
+                VirtAddr(sdata as usize),
+                VirtAddr(edata as usize),
+                MapType::Identical,
+                MapPermission::R | MapPermission::W,
+            ),
+            Option::None,
+        );
+
+        debug!(
+            "[Kernel] Mapping .bss, {:016X}..{:016X}",
+            sbss as usize, ebss as usize
+        );
+        kernel_space.push(
+            MapArea::new(
+                VirtAddr(sbss as usize),
+                VirtAddr(ebss as usize),
+                MapType::Identical,
+                MapPermission::R | MapPermission::W,
+            ),
+            Option::None,
+        );
+
+        debug!(
+            "[Kernel] Mapping physical memory, {:016X}..{:016X}",
+            ekernel as usize, MEMORY_END
+        );
+        kernel_space.push(
+            MapArea::new(
+                (ekernel as usize).into(),
+                MEMORY_END.into(),
+                MapType::Identical,
+                MapPermission::R | MapPermission::W,
+            ),
+            None,
+        );
+
+        debug!("[Kernel] Mapping memory-mapped registers");
+        for pair in MMIO {
+            kernel_space.push(
+                MapArea::new(
+                    (*pair).0.into(),
+                    ((*pair).0 + (*pair).1).into(),
+                    MapType::Identical,
+                    MapPermission::R | MapPermission::W,
+                ),
+                None,
+            );
+        }
+
+        kernel_space
+    }
+
+    pub fn map_trampoline(mem_space: &mut MemorySpace) {
+        extern "C" {
+            fn strampoline();
+        }
+
+        mem_space.page_table.map(
+            VirtAddr::from(TRAMPOLINE).into(),
+            PhysAddr::from(strampoline as usize).into(),
+            PageTableEntryFlags::R | PageTableEntryFlags::X,
+        );
+    }
+}
+
+lazy_static! {
+    /// a memory set instance through lazy_static! managing kernel space
+    pub static ref KERNEL_SPACE: Arc<UPSafeCell<MemorySpace>> =
+        Arc::new(unsafe { UPSafeCell::new(KernelSpace::new()) });
+}
+
+static mut KERNEL_TOKEN: Option<usize> = Option::None;
+
+pub fn kernel_token() -> usize {
+    match unsafe { KERNEL_TOKEN } {
+        Some(token) => token,
+        None => {
+            let token = KERNEL_SPACE.exclusive_access().token();
+            unsafe { KERNEL_TOKEN = Some(token) };
+            token
+        }
+    }
+}
+
+pub struct UserSpace;
+
+impl UserSpace {
+    pub fn from_elf(elf_data: &[u8]) -> MemorySpace {
+        let mut user_space = MemorySpace::new_empty();
+        
+        KernelSpace::map_trampoline(&mut user_space);
+
+        let elf = xmas_elf::ElfFile::new(elf_data).unwrap();
+        let header = elf.header;
+        
+        let magic = header.pt1.magic;
+        // 0x7f 'E' 'L' 'F'
+        assert!(magic == [0x7F, 0x45, 0x4C, 0x46], "Invalid ELF magic number");
+        
+        let ph_count = header.pt2.ph_count();
+        let mut max_end_vpn = VirtPageNum(0);
+
+        // TODO
+        todo!()
     }
 }

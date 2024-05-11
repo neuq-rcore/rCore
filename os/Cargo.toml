@@ -13,6 +13,7 @@ fatfs = { git = "https://github.com/neuq-rcore/rust-fatfs", default-features = f
 virtio-drivers = { git = "https://github.com/rcore-os/virtio-drivers", rev = "4ee80e5" }
 buddy_system_allocator = { git = "https://github.com/neuq-rcore/buddy_system_allocator" }
 bitflags = { git = "https://github.com/neuq-rcore/bitflags" }
+xmas-elf = { git = "https://github.com/nrc/xmas-elf.git" }
 
 [profile.release]
 debug = true

@@ -8,9 +8,12 @@
 )]
 
 use core::{
-    arch::{asm, global_asm}, slice
+    arch::{asm, global_asm},
+    slice,
 };
 
+use alloc::string::String;
+use fat32::Fat32FileSystem;
 use sbi::shutdown;
 
 #[macro_use]
@@ -21,11 +24,14 @@ mod board;
 
 #[macro_use]
 pub mod stdio;
+mod boards;
 mod config;
+mod drivers;
 mod fat32;
 mod lang_items;
 mod loader;
 mod logging;
+mod mm;
 mod sbi;
 mod stack_trace;
 mod sync;
@@ -33,13 +39,35 @@ pub mod syscall;
 pub mod task;
 mod timer;
 pub mod trap;
-mod mm;
 
 global_asm!(include_str!("link_app.S"));
 
+fn format_file_size(size: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = 1024 * KB;
+    const GB: u64 = 1024 * MB;
+    if size < KB {
+        format!("{}B", size)
+    } else if size < MB {
+        format!("{}KB", size / KB)
+    } else if size < GB {
+        format!("{}MB", size / MB)
+    } else {
+        format!("{}GB", size / GB)
+    }
+}
+
 #[no_mangle]
 fn main() {
-    task::run_first_task();
+    // task::run_first_task();
+    // let fs = Fat32FileSystem::new(0);
+    // let root = fs.root_dir();
+
+    // for r in root.iter() {
+    //     let f = r.unwrap();
+    //     let file_name = String::from_utf8_lossy(f.short_file_name_as_bytes());
+    //     println!("{:4}  {}", format_file_size(f.len()), file_name);
+    // }
 }
 
 #[naked]
@@ -82,7 +110,7 @@ fn debug_env() {
     use log::debug;
     use sbi_spec::base::impl_id;
 
-    debug!("[kernel] Hello,init() world!");
+    debug!("[kernel] Hello, world!");
 
     debug!(
         "[INFO] SBI specification version: {0}",
