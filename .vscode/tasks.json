@@ -4,7 +4,7 @@
         {
             "label": "Qemu",
             "type": "shell",
-            "command": "make debug",
+            "command": "make debug LOG=TRACE",
             "group": {
                 "kind": "none",
                 "isDefault": true
