@@ -6,3 +6,6 @@ rustflags = [
 	"-C", "link-arg=-Tsrc/linker-qemu.ld", 
 	"-C", "force-frame-pointers=yes"
 ]
+
+[profile.release]
+opt-level = 1
