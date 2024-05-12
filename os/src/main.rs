@@ -8,12 +8,12 @@
 )]
 
 use core::{
-    arch::{asm, global_asm},
-    slice,
+    arch::{asm, global_asm}, panic, slice
 };
 
 use alloc::string::String;
 use fat32::Fat32FileSystem;
+use mm::frame::frame_alloc;
 use sbi::shutdown;
 
 #[macro_use]
@@ -68,6 +68,10 @@ fn main() {
     //     let file_name = String::from_utf8_lossy(f.short_file_name_as_bytes());
     //     println!("{:4}  {}", format_file_size(f.len()), file_name);
     // }
+
+    let add = frame_alloc().unwrap();
+
+    println!("0x{:016X}", add.ppn.0 << 12);
 }
 
 #[naked]

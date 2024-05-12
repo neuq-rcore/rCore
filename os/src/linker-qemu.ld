@@ -35,7 +35,6 @@ SECTIONS
 
     . = ALIGN(4K);
     edata = .;
-    sbss = .;
     .bss : {
         *(.bss.heap)
         *(.bss.stack)
@@ -44,6 +43,7 @@ SECTIONS
         . += 0x00080000;
         . = ALIGN(4K);
         PROVIDE(tmp_stack_top = .);
+        sbss = .;
         *(.bss .bss.*)
         *(.sbss .sbss.*)
     }

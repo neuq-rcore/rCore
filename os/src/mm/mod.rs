@@ -25,7 +25,8 @@ pub fn init() {
     heap::init();
     frame::init();
 
-    KernelSpace::activate();
+    // TODO: impl other memory management
+    // KernelSpace::activate();
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
