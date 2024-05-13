@@ -74,9 +74,12 @@ impl From<VirtAddr> for usize {
 }
 
 impl VirtAddr {
+    // Returns the floor of the virtual address
     pub fn floor(&self) -> VirtPageNum {
         VirtPageNum(self.0 / PAGE_SIZE)
     }
+
+    // Returns the ceiling of the virtual address
     pub fn ceil(&self) -> VirtPageNum {
         if self.0 == 0 {
             VirtPageNum(0)
@@ -84,9 +87,13 @@ impl VirtAddr {
             VirtPageNum((self.0 - 1 + PAGE_SIZE) / PAGE_SIZE)
         }
     }
+
+    // Returns the offset within the page
     pub fn page_offset(&self) -> usize {
         self.0 & (PAGE_SIZE - 1)
     }
+
+    // Checks if the address is page-aligned
     pub fn aligned(&self) -> bool {
         self.page_offset() == 0
     }

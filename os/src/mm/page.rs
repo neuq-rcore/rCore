@@ -37,13 +37,8 @@ impl PageTable {
     }
 
     pub fn unmap(&mut self, vpn: VirtPageNum) {
-        match self.get_entry(vpn) {
-            Some(entry) => {
-                assert!(entry.is_valid()); // The page should be mapped
-                *entry = PageTableEntry::empty();
-            }
-            None => panic!("unmap a unmapped page"),
-        }
+        let entry = self.get_entry(vpn).expect("Attempted to unmap an unmapped page");
+        *entry = PageTableEntry::empty();
     }
 }
 
