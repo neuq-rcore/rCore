@@ -74,8 +74,6 @@ fn main() {
 
     // TODO: Implement user space task system
     // task::run_first_task();
-
-    panic!("Shutdown kernel!");
 }
 
 #[naked]
