@@ -38,7 +38,8 @@ pub mod task;
 mod timer;
 pub mod trap;
 
-global_asm!(include_str!("link_app.S"));
+// Since we've implemented filesystem, we will soon migrate to test suits from sdcard image
+// global_asm!(include_str!("link_app.S"));
 
 fn format_file_size(size: u64) -> String {
     const KB: u64 = 1024;
