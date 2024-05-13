@@ -1,22 +1,35 @@
 #![no_main]
 #![no_std]
-#![feature(panic_info_message, slice_from_ptr_range, naked_functions)]
+#![feature(
+    panic_info_message,
+    slice_from_ptr_range,
+    naked_functions,
+    alloc_error_handler
+)]
 
 use core::{
     arch::{asm, global_asm},
-    slice,
+    panic, slice,
 };
+
+use alloc::string::String;
 use sbi::shutdown;
 
-#[path = "boards/qemu.rs"]
-mod board;
+use crate::fat32::Fat32FileSystem;
+
+#[macro_use]
+extern crate alloc;
 
 #[macro_use]
 pub mod stdio;
+mod boards;
 mod config;
+mod driver;
+mod fat32;
 mod lang_items;
 mod loader;
 mod logging;
+mod mm;
 mod sbi;
 mod stack_trace;
 mod sync;
@@ -27,28 +40,40 @@ pub mod trap;
 
 global_asm!(include_str!("link_app.S"));
 
+fn format_file_size(size: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = 1024 * KB;
+    const GB: u64 = 1024 * MB;
+    if size < KB {
+        format!("{}B", size)
+    } else if size < MB {
+        format!("{}KB", size / KB)
+    } else if size < GB {
+        format!("{}MB", size / MB)
+    } else {
+        format!("{}GB", size / GB)
+    }
+}
+
 #[no_mangle]
 fn main() {
+    let fs = Fat32FileSystem::new(0);
+
+    let root_dir = fs.root_dir();
+
+    let only_dir = root_dir.iter().next().unwrap().unwrap().to_dir();
+
+    println!("Files/Dirs in <root/>/riscv64/:");
+
+    for e in only_dir.iter() {
+        let e = e.unwrap();
+        let name = e.file_name();
+
+        println!("  File/Dir: {}", name);
+    }
+
+    // TODO: Implement user space task system
     // task::run_first_task();
-    println!(
-        r#"========== START test_open
-Hi, this is a text file.
-syscalls testing success!
-========== END test_open
-========== START test_sleep
-sleep success.
-========== END test_sleep
-========== START test_write
-Hello operating system contest.
-========== END test_write
-========== START test_fork
-Simulate Failed test
-========== END test_fork
-========== START test_read
-Hi, this is a text file.
-========== END test_read
-"#
-    )
 }
 
 #[naked]
@@ -69,15 +94,17 @@ unsafe extern "C" fn _start() -> ! {
 #[no_mangle]
 unsafe extern "C" fn __kernel_start_main() -> ! {
     clear_bss();
-
     logging::init();
 
-    debug_env();
+    // heap initlization depends on logging
+    mm::init();
 
     trap::init();
     loader::load_apps();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
+
+    debug_env();
 
     main();
 

@@ -34,23 +34,12 @@ KERNEL_ENTRY_PA := 0x80200000
 QEMU_ARGS := -machine virt \
 			 -nographic \
 			 -bios $(BOOTLOADER) \
-			 -device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA)
+			 -device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA) \
+			 -drive file=../test/sdcard.img,if=none,format=raw,id=x0 \
+        	 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 # End Region // Board
 
 all: build
-
-release: release-pre release-inner
-
-release-pre:
-CARGO_FLAGS := --release
-MODE := release
-KERNEL_ELF := target/$(TARGET)/$(MODE)/$(OUTPUT_NAME)
-KERNEL_BIN := $(KERNEL_ELF).bin
-
-release-inner:
-	@echo '[+] Building os kernel(release)'
-	$(CARGO) build $(CARGO_FLAGS)
-	@$(OBJCOPY) --strip-all $(KERNEL_ELF) $(KERNEL_BIN)
 
 build: build-app
 	@echo '[+] Building os kernel'
@@ -81,3 +70,17 @@ help:
 	@echo '- make run     : Run os kernel with qemu'
 	@echo '- make debug   : Launch the os with qemu and wait for gdb'
 	@echo '- make connect : Launch gdb and connect to qemu'
+
+release: CARGO_FLAGS = --release
+release: MODE = release
+release: KERNEL_ELF = target/$(TARGET)/$(MODE)/$(OUTPUT_NAME)
+release: KERNEL_BIN = $(KERNEL_ELF).bin
+release: release-pre release-inner
+
+release-pre:
+	@echo 'Preparing for release build...'
+
+release-inner:
+	@echo '[+] Building os kernel(release)'
+	$(CARGO) build $(CARGO_FLAGS)
+	@$(OBJCOPY) --strip-all $(KERNEL_ELF) $(KERNEL_BIN)

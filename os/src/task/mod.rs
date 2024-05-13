@@ -27,23 +27,22 @@ pub struct TaskManagerInner {
 lazy_static! {
     pub static ref TASK_MANAGER: TaskManager = {
         let num_app = get_num_app();
-        let mut tasks = [
-            TaskControlBlock {
-                task_cx: TaskContext::zero_init(),
-                task_status: TaskStatus::UnInit,
-            };
-            MAX_APP_NUM
-        ];
+        let mut tasks = [TaskControlBlock {
+            task_cx: TaskContext::zero_init(),
+            task_status: TaskStatus::UnInit,
+        }; MAX_APP_NUM];
         for (i, task) in tasks.iter_mut().enumerate() {
             task.task_cx = TaskContext::goto_restore(init_app_cx(i));
             task.task_status = TaskStatus::Ready;
         }
         TaskManager {
             num_app,
-            inner: unsafe { UPSafeCell::new(TaskManagerInner {
-                tasks,
-                current_task: 0,
-            })},
+            inner: unsafe {
+                UPSafeCell::new(TaskManagerInner {
+                    tasks,
+                    current_task: 0,
+                })
+            },
         }
     };
 }
