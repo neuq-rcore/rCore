@@ -25,8 +25,7 @@ pub fn init() {
     heap::init();
     frame::init();
 
-    // TODO: impl other memory management
-    // KernelSpace::activate();
+    KernelSpace::activate();
 }
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -193,7 +192,8 @@ impl KernelSpace {
             fn sdata();
             fn edata();
 
-            fn sbss();
+            // do not use this as this does not contains the stack
+            // fn sbss();
             fn ebss();
 
             fn ekernel();
@@ -247,11 +247,11 @@ impl KernelSpace {
 
         debug!(
             "[Kernel] Mapping .bss, 0x{:08X}..0x{:08X}",
-            sbss as usize, ebss as usize
+            edata as usize, ebss as usize
         );
         kernel_space.push(
             MapArea::new(
-                VirtAddr(sbss as usize),
+                VirtAddr(edata as usize),
                 VirtAddr(ebss as usize),
                 MapType::Identical,
                 MapPermission::R | MapPermission::W,
@@ -275,6 +275,7 @@ impl KernelSpace {
 
         debug!("[Kernel] Mapping memory-mapped registers");
         for &(start, len) in MMIO {
+            println!("MMIO: start: 0x{:08X}, len: 0x{:08X}", start, len);
             kernel_space.push(
                 MapArea::new(
                     VirtAddr(start),
@@ -319,17 +320,8 @@ lazy_static! {
         Arc::new(unsafe { UPSafeCell::new(KernelSpace::new()) });
 }
 
-static mut KERNEL_TOKEN: Option<usize> = Option::None;
-
 pub fn kernel_token() -> usize {
-    match unsafe { KERNEL_TOKEN } {
-        Some(token) => token,
-        None => {
-            let token = KERNEL_SPACE.exclusive_access().token();
-            unsafe { KERNEL_TOKEN = Some(token) };
-            token
-        }
-    }
+    KERNEL_SPACE.exclusive_access().token()
 }
 
 pub struct UserSpace;

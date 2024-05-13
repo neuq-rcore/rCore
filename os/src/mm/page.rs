@@ -32,7 +32,8 @@ impl PageTable {
     pub fn map(&mut self, vpn: VirtPageNum, ppn: PhysPageNum, flags: PageTableEntryFlags) {
         let entry = self.get_create_entry(vpn);
         assert!(!entry.is_valid()); // 一个虚拟页只能映射到一个物理页
-        *entry = PageTableEntry::new(ppn, flags);
+        *entry = PageTableEntry::new(ppn, flags | PageTableEntryFlags::V);
+        assert!(entry.is_valid());
     }
 
     pub fn unmap(&mut self, vpn: VirtPageNum) {
@@ -89,8 +90,7 @@ impl PageTable {
 
             if !entry.is_valid() {
                 let frame = frame_alloc().unwrap();
-                let flags =
-                    PageTableEntryFlags::V | PageTableEntryFlags::R | PageTableEntryFlags::W;
+                let flags = PageTableEntryFlags::V;
                 *entry = PageTableEntry::new(frame.ppn, flags);
                 self.frames.push(frame);
             }
