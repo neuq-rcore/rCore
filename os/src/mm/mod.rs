@@ -15,11 +15,12 @@ use lazy_static::lazy_static;
 
 use crate::config::{MEMORY_END, PAGE_SIZE};
 
-use self::{
+pub use self::{
     address::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum},
     frame::{frame_alloc, TrackedFrame},
-    page::PageTableEntryFlags,
 };
+
+use page::PageTableEntryFlags;
 
 pub fn init() {
     heap::init();

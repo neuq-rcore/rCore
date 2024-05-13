@@ -8,13 +8,14 @@
 )]
 
 use core::{
-    arch::{asm, global_asm}, panic, slice
+arch::{asm, global_asm}, panic, slice
 };
 
 use alloc::string::String;
-use fat32::Fat32FileSystem;
 use mm::frame::frame_alloc;
 use sbi::shutdown;
+
+use crate::fat32::Fat32FileSystem;
 
 #[macro_use]
 extern crate alloc;
@@ -26,8 +27,6 @@ mod board;
 pub mod stdio;
 mod boards;
 mod config;
-mod drivers;
-mod fat32;
 mod lang_items;
 mod loader;
 mod logging;
@@ -39,6 +38,8 @@ pub mod syscall;
 pub mod task;
 mod timer;
 pub mod trap;
+mod driver;
+mod fat32;
 
 global_asm!(include_str!("link_app.S"));
 
@@ -59,19 +60,25 @@ fn format_file_size(size: u64) -> String {
 
 #[no_mangle]
 fn main() {
+    let fs = Fat32FileSystem::new(0);
+
+    let root_dir = fs.root_dir();
+
+    let only_dir = root_dir.iter().next().unwrap().unwrap().to_dir();
+
+    println!("Files/Dirs in <root/>/riscv64/:");
+
+    for e in only_dir.iter() {
+        let e= e.unwrap();
+        let name = e.file_name();
+
+        println!("  File/Dir: {}", name);
+    }
+
+    // TODO: Implement user space task system
     // task::run_first_task();
-    // let fs = Fat32FileSystem::new(0);
-    // let root = fs.root_dir();
 
-    // for r in root.iter() {
-    //     let f = r.unwrap();
-    //     let file_name = String::from_utf8_lossy(f.short_file_name_as_bytes());
-    //     println!("{:4}  {}", format_file_size(f.len()), file_name);
-    // }
-
-    let add = frame_alloc().unwrap();
-
-    println!("0x{:016X}", add.ppn.0 << 12);
+    panic!("Shutdown kernel!");
 }
 
 #[naked]
