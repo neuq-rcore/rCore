@@ -21,7 +21,7 @@ impl Fat32FileSystem {
         let va = pa;
 
         let header = unsafe { &mut *(va as *mut VirtIOHeader) };
-        
+
         println!("[Disk] Valid: {:}", header.verify());
         assert!(header.verify(), "Header is not valid");
 
@@ -120,7 +120,7 @@ impl Seek for Fat32IO {
     }
 }
 
-trait IDiskDevice {
+pub trait IDiskDevice {
     fn read_blocks(&mut self, buf: &mut [u8]);
 
     fn write_blocks(&mut self, buf: &[u8]);

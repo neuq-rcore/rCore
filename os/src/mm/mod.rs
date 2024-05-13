@@ -3,7 +3,11 @@ pub mod frame;
 pub mod heap;
 pub mod page;
 
-use crate::{boards::MMIO, config::{TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE}, sync::UPSafeCell};
+use crate::{
+    boards::MMIO,
+    config::{TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE},
+    sync::UPSafeCell,
+};
 use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
 use core::{arch::asm, ops::Range, str};
 use log::debug;
@@ -135,7 +139,7 @@ impl MapArea {
 
     pub fn unmap_page(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {
         if self.map_type == MapType::Framed {
-            let frame = self.data_frames.remove(&vpn).unwrap();
+            let _frame = self.data_frames.remove(&vpn).unwrap();
             // auto dealloc with deconstructor
         }
 
@@ -343,10 +347,9 @@ impl UserSpace {
             "Invalid ELF magic number"
         );
 
-        let ph_count = header.pt2.ph_count();
         let mut max_end_vpn = VirtPageNum(0);
 
-        for (i, ph) in elf.program_iter().enumerate() {
+        for ph in elf.program_iter() {
             if ph.get_type().unwrap() != xmas_elf::program::Type::Load {
                 continue;
             }
@@ -374,21 +377,31 @@ impl UserSpace {
         user_stack_bottom += PAGE_SIZE;
 
         let user_stack_top = user_stack_bottom + USER_STACK_SIZE;
-        user_space.push(MapArea::new(
-            user_stack_bottom.into(),
-            user_stack_top.into(),
-            MapType::Framed,
-            MapPermission::R | MapPermission::W | MapPermission::U,
-        ), None);
+        user_space.push(
+            MapArea::new(
+                user_stack_bottom.into(),
+                user_stack_top.into(),
+                MapType::Framed,
+                MapPermission::R | MapPermission::W | MapPermission::U,
+            ),
+            None,
+        );
 
         // map trap context with U flags
-        user_space.push(MapArea::new(
-            TRAP_CONTEXT.into(),
-            TRAMPOLINE.into(),
-            MapType::Framed,
-            MapPermission::R | MapPermission::W,
-        ), None);
+        user_space.push(
+            MapArea::new(
+                TRAP_CONTEXT.into(),
+                TRAMPOLINE.into(),
+                MapType::Framed,
+                MapPermission::R | MapPermission::W,
+            ),
+            None,
+        );
 
-        (user_space, user_stack_top,  elf.header.pt2.entry_point() as usize)
+        (
+            user_space,
+            user_stack_top,
+            elf.header.pt2.entry_point() as usize,
+        )
     }
 }

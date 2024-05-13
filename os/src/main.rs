@@ -8,11 +8,11 @@
 )]
 
 use core::{
-arch::{asm, global_asm}, panic, slice
+    arch::{asm, global_asm},
+    panic, slice,
 };
 
 use alloc::string::String;
-use mm::frame::frame_alloc;
 use sbi::shutdown;
 
 use crate::fat32::Fat32FileSystem;
@@ -20,13 +20,12 @@ use crate::fat32::Fat32FileSystem;
 #[macro_use]
 extern crate alloc;
 
-#[path = "boards/qemu.rs"]
-mod board;
-
 #[macro_use]
 pub mod stdio;
 mod boards;
 mod config;
+mod driver;
+mod fat32;
 mod lang_items;
 mod loader;
 mod logging;
@@ -38,8 +37,6 @@ pub mod syscall;
 pub mod task;
 mod timer;
 pub mod trap;
-mod driver;
-mod fat32;
 
 global_asm!(include_str!("link_app.S"));
 
@@ -69,7 +66,7 @@ fn main() {
     println!("Files/Dirs in <root/>/riscv64/:");
 
     for e in only_dir.iter() {
-        let e= e.unwrap();
+        let e = e.unwrap();
         let name = e.file_name();
 
         println!("  File/Dir: {}", name);

@@ -51,7 +51,7 @@ pub fn frame_alloc() -> Option<TrackedFrame> {
     FRAME_ALLOCATOR
         .exclusive_access()
         .alloc()
-        .map(|ppn| TrackedFrame::new(ppn))
+        .map(TrackedFrame::new)
 }
 
 pub fn frame_dealloc(ppn: PhysPageNum) {
@@ -110,14 +110,17 @@ impl FrameAllocator for StackedFrameAllocator {
 
         self.recycled.push_back(ppn);
     }
-    
+
     fn alloc_contiguous(&mut self, count: usize) -> Option<Vec<PhysPageNum>> {
         if self.curr_page_num + count >= self.end_page_num {
             None
         } else {
             self.curr_page_num += count;
             let arr: Vec<usize> = (1..count + 1).collect();
-            let v = arr.iter().map(|x| (self.curr_page_num - x).into()).collect();
+            let v = arr
+                .iter()
+                .map(|x| (self.curr_page_num - x).into())
+                .collect();
             Some(v)
         }
     }

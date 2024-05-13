@@ -1,3 +1,3 @@
-mod qemu;
+pub mod qemu;
 
-pub use qemu::MMIO as MMIO;
+pub use qemu::MMIO;

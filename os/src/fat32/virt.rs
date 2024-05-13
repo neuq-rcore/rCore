@@ -36,7 +36,7 @@ impl IDiskDevice for VirtioDisk {
     }
 
     fn get_position(&self) -> usize {
-        (self.sector * SECTOR_SIZE) as usize + self.offset
+        self.sector * SECTOR_SIZE + self.offset
     }
 
     fn set_position(&mut self, position: usize) {

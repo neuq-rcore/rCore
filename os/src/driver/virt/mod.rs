@@ -7,7 +7,10 @@ use log::debug;
 // use crate::mm::page_table::PageTable;
 // use crate::mm::memory_set::KERNEL_SPACE;
 
-use crate::mm::{frame::{frame_alloc_contiguous, frame_dealloc_contiguous}, PhysAddr, VirtAddr};
+use crate::mm::{
+    frame::{frame_alloc_contiguous, frame_dealloc_contiguous},
+    PhysAddr, VirtAddr,
+};
 pub const VIRTIO0: usize = 0x1000_1000;
 
 pub struct VirtioHal;
@@ -18,7 +21,7 @@ impl Hal for VirtioHal {
 
         let ppn_base = pages.last().unwrap().ppn;
         let begin_addr: PhysAddr = ppn_base.into();
-    
+
         forget(pages);
 
         // debug!("[#####] dma_alloc: {:#x?}, count: {}", begin_addr, count);
@@ -27,7 +30,7 @@ impl Hal for VirtioHal {
     }
 
     fn dma_dealloc(paddr: virtio_drivers::PhysAddr, pages: usize) -> i32 {
-        let ppn: PhysAddr = (paddr as usize).into();
+        let ppn: PhysAddr = paddr.into();
 
         // debug!("[#####] dma_dealloc: {:#x?}, count: {}", paddr, pages);
         frame_dealloc_contiguous(ppn.into(), pages);

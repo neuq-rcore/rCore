@@ -54,10 +54,9 @@ impl PageTable {
 
         let entry = Option::None;
 
-        for layer in 0..3 {
-            let index = indices[layer];
+        for (layer, &idx) in indices.iter().enumerate() {
             let entries = ppn.as_entry_slice();
-            let entry = &mut entries[index];
+            let entry = &mut entries[idx];
 
             if layer == 2 {
                 return Option::Some(entry);
@@ -79,8 +78,7 @@ impl PageTable {
 
         let mut entry: &mut PageTableEntry;
 
-        for layer in 0..3 {
-            let idx = indices[layer];
+        for (layer, &idx) in indices.iter().enumerate() {
             let entries = ppn.as_entry_slice();
             entry = &mut entries[idx];
 
