@@ -45,16 +45,15 @@ def visualize(data):
             failed += 1
             status = TEST_FAILED
 
-        line = "  " + get_prefix(status) + " " + name + " [" + str(num_passed) + "/" + str(num_total) + "]"
-        print(line)
+        print(f"  {get_prefix(status)} {name} [{num_passed}/{num_total}]")
     
     print()
-    print("Total tests: " + str(total_tests))
-    print("    Skiped: " + str(skiped))
-    print("    Passed: " + str(passed))
-    print("    Failed: " + str(failed))
+    print(f"Total tests: {total_tests}")
+    print(f"    Skipped: {skiped}")
+    print(f"    Passed: {passed}")
+    print(f"    Failed: {failed}")
     print()
-    print("Scores: " + str(score) + "/" + str(total_scores))
+    print(f"Scores: {score}/{total_scores}")
     print()
     print("Raw test result and kernel output will be uploaded to the artifacts")
 
@@ -66,4 +65,15 @@ if __name__ == '__main__':
     file_name = sys.argv[1]
     output = read_output(file_name)
     data = json.loads(output)
+    print(r"                          ___  ____  ")
+    print(r"  _ __   ___ _   _  __ _ / _ \/ ___| ")
+    print(r" | '_ \ / _ \ | | |/ _` | | | \___ \ ")
+    print(r" | | | |  __/ |_| | (_| | |_| |___) |")
+    print(r" |_| |_|\___|\__,_|\__, |\___/|____/ ")
+    print(r"  _____         _     |_|            ")
+    print(r" |_   _|__  ___| |_                  ")
+    print(r"   | |/ _ \/ __| __|                 ")
+    print(r"   | |  __/\__ \ |_                  ")
+    print(r"   |_|\___||___/\__|                 ")
+    print("Result:")
     visualize(data)
