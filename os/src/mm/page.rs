@@ -1,5 +1,3 @@
-use core::panic;
-
 use alloc::vec::Vec;
 
 use super::{
@@ -37,7 +35,9 @@ impl PageTable {
     }
 
     pub fn unmap(&mut self, vpn: VirtPageNum) {
-        let entry = self.get_entry(vpn).expect("Attempted to unmap an unmapped page");
+        let entry = self
+            .get_entry(vpn)
+            .expect("Attempted to unmap an unmapped page");
         *entry = PageTableEntry::empty();
     }
 }
