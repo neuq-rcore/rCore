@@ -1,22 +1,37 @@
 #![no_main]
 #![no_std]
-#![feature(panic_info_message, slice_from_ptr_range, naked_functions)]
+#![feature(
+    panic_info_message,
+    slice_from_ptr_range,
+    naked_functions,
+    alloc_error_handler
+)]
 
 use core::{
-    arch::{asm, global_asm},
-    slice,
+    arch::{asm, global_asm}, panic, slice
 };
+
+use alloc::string::String;
+use fat32::Fat32FileSystem;
+use mm::frame::frame_alloc;
 use sbi::shutdown;
+
+#[macro_use]
+extern crate alloc;
 
 #[path = "boards/qemu.rs"]
 mod board;
 
 #[macro_use]
 pub mod stdio;
+mod boards;
 mod config;
+mod drivers;
+mod fat32;
 mod lang_items;
 mod loader;
 mod logging;
+mod mm;
 mod sbi;
 mod stack_trace;
 mod sync;
@@ -27,9 +42,36 @@ pub mod trap;
 
 global_asm!(include_str!("link_app.S"));
 
+fn format_file_size(size: u64) -> String {
+    const KB: u64 = 1024;
+    const MB: u64 = 1024 * KB;
+    const GB: u64 = 1024 * MB;
+    if size < KB {
+        format!("{}B", size)
+    } else if size < MB {
+        format!("{}KB", size / KB)
+    } else if size < GB {
+        format!("{}MB", size / MB)
+    } else {
+        format!("{}GB", size / GB)
+    }
+}
+
 #[no_mangle]
 fn main() {
-    task::run_first_task();
+    // task::run_first_task();
+    // let fs = Fat32FileSystem::new(0);
+    // let root = fs.root_dir();
+
+    // for r in root.iter() {
+    //     let f = r.unwrap();
+    //     let file_name = String::from_utf8_lossy(f.short_file_name_as_bytes());
+    //     println!("{:4}  {}", format_file_size(f.len()), file_name);
+    // }
+
+    let add = frame_alloc().unwrap();
+
+    println!("0x{:016X}", add.ppn.0 << 12);
 }
 
 #[naked]
@@ -50,15 +92,17 @@ unsafe extern "C" fn _start() -> ! {
 #[no_mangle]
 unsafe extern "C" fn __kernel_start_main() -> ! {
     clear_bss();
-
     logging::init();
 
-    debug_env();
+    // heap initlization depends on logging
+    mm::init();
 
     trap::init();
     loader::load_apps();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
+
+    debug_env();
 
     main();
 
