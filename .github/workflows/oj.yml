@@ -64,3 +64,35 @@ jobs:
       - uses: actions/upload-artifact@v4.3.3
         with: 
           path: ${{ env.ARTIFACT_DIR }}
+
+  dummy-test:
+    runs-on: ubuntu-latest
+    env:
+      QEMU_OUTPUT: "output.log"
+      RAW_RESULT: "results.json"
+      ARTIFACT_DIR: "output"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y qemu-user
+          qemu-riscv64 --version
+
+      - name: Dummy test
+      # let's use sudo as it produce `qemu-riscv64: test/riscv64/write: Error mapping file: Operation not permitted`
+      # and refuse to run the test
+        run: sudo make dummy-test
+      
+      - name: Prepare to upload artifact
+        run: |
+          sudo mkdir ${{ env.ARTIFACT_DIR }}
+          sudo mv ${{ env.QEMU_OUTPUT }} ${{ env.ARTIFACT_DIR }}
+          sudo mv ${{ env.RAW_RESULT }} ${{ env.ARTIFACT_DIR }}
+
+      - uses: actions/upload-artifact@v4.3.3
+        with: 
+          path: ${{ env.ARTIFACT_DIR }}
+          name: "dummy test"
