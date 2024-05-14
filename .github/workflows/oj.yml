@@ -82,13 +82,15 @@ jobs:
           qemu-riscv64 --version
 
       - name: Dummy test
-        run: make dummy-test
+      # let's use sudo as it produce `qemu-riscv64: test/riscv64/write: Error mapping file: Operation not permitted`
+      # and refuse to run the test
+        run: sudo make dummy-test
       
       - name: Prepare to upload artifact
         run: |
-          mkdir ${{ env.ARTIFACT_DIR }}
-          mv ${{ env.QEMU_OUTPUT }} ${{ env.ARTIFACT_DIR }}
-          mv ${{ env.RAW_RESULT }} ${{ env.ARTIFACT_DIR }}
+          sudo mkdir ${{ env.ARTIFACT_DIR }}
+          sudo mv ${{ env.QEMU_OUTPUT }} ${{ env.ARTIFACT_DIR }}
+          sudo mv ${{ env.RAW_RESULT }} ${{ env.ARTIFACT_DIR }}
 
       - uses: actions/upload-artifact@v4.3.3
         with: 
