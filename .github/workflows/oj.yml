@@ -64,3 +64,27 @@ jobs:
       - uses: actions/upload-artifact@v4.3.3
         with: 
           path: ${{ env.ARTIFACT_DIR }}
+
+  dummy-test:
+    runs-on: ubuntu-latest
+    env:
+      QEMU_OUTPUT: "output.log"
+      RAW_RESULT: "results.json"
+      ARTIFACT_DIR: "output"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dummy test
+        run: make dummy-test
+      
+      - name: Prepare to upload artifact
+        run: |
+          mkdir ${{ env.ARTIFACT_DIR }}
+          mv ${{ env.QEMU_OUTPUT }} ${{ env.ARTIFACT_DIR }}
+          mv ${{ env.RAW_RESULT }} ${{ env.ARTIFACT_DIR }}
+
+      - uses: actions/upload-artifact@v4.3.3
+        with: 
+          path: ${{ env.ARTIFACT_DIR }}
+          name: "dummy test"
