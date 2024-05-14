@@ -2,6 +2,13 @@
 
 A simple os kernel for riscv64
 
+[![Continuous Integration](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml)
+
+[![Sync to GitLab](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml)
+
+[![OJ Simulation](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml)
+
+
 ## Build Dependencies
 
 - `riscv64-elf-gcc`
