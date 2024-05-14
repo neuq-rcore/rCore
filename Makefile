@@ -1,6 +1,8 @@
 .PHONY: clippy clippy-% all test test-inner parse dummy-run dummy-test
 
 all:
+# Temporarily enable user program build to make CI pass
+	@cd user && make -s build
 	@cd os && make -s release
 
 	@cp os/target/riscv64gc-unknown-none-elf/release/os.bin kernel-qemu
