@@ -78,9 +78,8 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y qemu-system-misc
-          qemu-system-riscv64 --version
-
+          sudo apt install -y qemu-user
+          qemu-riscv64 --version
 
       - name: Dummy test
         run: make dummy-test
