@@ -34,7 +34,7 @@ KERNEL_ENTRY_PA := 0x80200000
 QEMU_ARGS := -machine virt \
 			 -nographic \
 			 -bios $(BOOTLOADER) \
-			 -device loader,file=$(KERNEL_BIN),addr=$(KERNEL_ENTRY_PA) \
+			 -device loader,file=$(KERNEL_ELF),addr=$(KERNEL_ENTRY_PA) \
 			 -drive file=../test/sdcard.img,if=none,format=raw,id=x0 \
         	 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 # End Region // Board
