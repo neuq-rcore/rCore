@@ -1,6 +1,21 @@
 /target
+
+# make all outputs/dependencies
 sbi-qemu
 kernel-qemu
+
+# test results
 output.log
 results.json
+
+# oj test dependency
 sdcard.img
+
+# test result parse
+test/check_result/__pycache__
+
+# Dummy test temp files
+test_close.txt
+test_mmap.txt
+
+os/src/link_app.S
