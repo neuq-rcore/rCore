@@ -24,5 +24,5 @@ pub fn init() {
 
 #[alloc_error_handler]
 fn alloc_error_handler(layout: core::alloc::Layout) -> ! {
-    panic!("[Kernel] Allocation error, layout: {:?}", layout)
+    panic!("Allocation error, layout: {:?}", layout)
 }

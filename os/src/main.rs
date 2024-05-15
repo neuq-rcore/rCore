@@ -13,6 +13,7 @@ use core::{
 };
 
 use alloc::string::String;
+use log::info;
 use sbi::shutdown;
 
 use crate::fat32::Fat32FileSystem;
@@ -117,10 +118,10 @@ fn debug_env() {
     use log::debug;
     use sbi_spec::base::impl_id;
 
-    debug!("[kernel] Hello, world!");
+    info!("Hello, world!");
 
     debug!(
-        "[INFO] SBI specification version: {0}",
+        "SBI specification version: {0}",
         sbi_rt::get_spec_version()
     );
 
@@ -136,14 +137,14 @@ fn debug_env() {
         _ => "Unknown",
     };
 
-    debug!("[INFO] SBI implementation: {0}", sbi_impl);
+    debug!("SBI implementation: {0}", sbi_impl);
 
     let console_type = match UnionConsole::instance() {
         UnionConsole::Legacy(_) => "Legacy",
         UnionConsole::Dbcn(_) => "DBCN",
     };
 
-    debug!("[INFO] Console type: {0}", console_type);
+    debug!("Console type: {0}", console_type);
 }
 
 unsafe fn clear_bss() {

@@ -209,7 +209,7 @@ impl KernelSpace {
         Self::map_trampoline(&mut kernel_space);
 
         debug!(
-            "[Kernel] Mapping .text, 0x{:08X}..0x{:08X}",
+            "Mapping .text, 0x{:08X}..0x{:08X}",
             stext as usize, etext as usize
         );
         kernel_space.push(
@@ -223,7 +223,7 @@ impl KernelSpace {
         );
 
         debug!(
-            "[Kernel] Mapping .rodata, 0x{:08X}..0x{:08X}",
+            "Mapping .rodata, 0x{:08X}..0x{:08X}",
             srodata as usize, erodata as usize
         );
         kernel_space.push(
@@ -237,7 +237,7 @@ impl KernelSpace {
         );
 
         debug!(
-            "[Kernel] Mapping .data, 0x{:08X}..0x{:08X}",
+            "Mapping .data, 0x{:08X}..0x{:08X}",
             sdata as usize, edata as usize
         );
         kernel_space.push(
@@ -251,7 +251,7 @@ impl KernelSpace {
         );
 
         debug!(
-            "[Kernel] Mapping .bss, 0x{:08X}..0x{:08X}",
+            "Mapping .bss, 0x{:08X}..0x{:08X}",
             edata as usize, ebss as usize
         );
         kernel_space.push(
@@ -265,7 +265,7 @@ impl KernelSpace {
         );
 
         debug!(
-            "[Kernel] Mapping physical memory, 0x{:08X}..0x{:08X}",
+            "Mapping physical memory, 0x{:08X}..0x{:08X}",
             ekernel as usize, MEMORY_END
         );
         kernel_space.push(
@@ -278,9 +278,9 @@ impl KernelSpace {
             None,
         );
 
-        debug!("[Kernel] Mapping memory-mapped registers");
+        debug!("Mapping memory-mapped registers");
         for &(start, len) in MMIO {
-            println!("MMIO: start: 0x{:08X}, len: 0x{:08X}", start, len);
+            debug!("Mapping MMIO: start: 0x{:08X}, len: 0x{:08X}", start, len);
             kernel_space.push(
                 MapArea::new(
                     VirtAddr(start),
@@ -310,7 +310,7 @@ impl KernelSpace {
     pub fn activate() {
         let satp = kernel_token();
 
-        debug!("[Kernel] Activating kernel space, SATP: 0x{:X}", satp);
+        debug!("Activating kernel space, SATP: 0x{:X}", satp);
         unsafe {
             satp::write(satp);
             asm!("sfence.vma");
