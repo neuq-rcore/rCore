@@ -3,7 +3,7 @@ name: Sync to GitLab
 on:
   push:
     branches:
-      - "**"
+      - ${{ github.ref }}
   workflow_dispatch:
 
 jobs:
@@ -26,5 +26,4 @@ jobs:
       - name: Push to GitLab
         run: |
           git remote add gitlab https://${{ env.GITLAB_USER}}:${{ secrets.GITLAB_TOKEN }}@gitlab.eduxiji.net/neuqOS/neuq-rcore.git
-          git push --all gitlab
-          git push --tags gitlab
+          git push gitlab HEAD:${{ github.ref }}
