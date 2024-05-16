@@ -1,7 +1,8 @@
 # Region // Build
 OUTPUT_NAME = os
 
-CARGO := cargo
+CARGO_HOME := $(shell pwd)/../.cargo
+CARGO := CARGO_HOME=$(CARGO_HOME) cargo
 CARGO_FLAGS :=
 MODE := debug
 TARGET := riscv64gc-unknown-none-elf
@@ -42,6 +43,7 @@ QEMU_ARGS := -machine virt \
 all: build
 
 build: build-app
+	@echo "[+] Cargo home: $(CARGO_HOME)"
 	@echo '[+] Building os kernel'
 	$(CARGO) build $(CARGO_FLAGS)
 	@$(OBJCOPY) --strip-all $(KERNEL_ELF) $(KERNEL_BIN)

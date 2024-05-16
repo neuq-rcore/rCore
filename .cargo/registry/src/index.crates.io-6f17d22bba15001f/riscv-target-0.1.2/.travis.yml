@@ -1,0 +1,22 @@
+language: rust
+os: linux
+rust:
+  - 1.30.0 # MSRV
+  - stable
+  - nightly
+
+sudo: true
+
+before_install:
+  - rustup component add clippy
+
+script:
+  - cargo clippy
+  - cargo build --all
+  - cargo test --all
+  - cargo check --all
+  - cargo doc --all --no-deps
+
+cache:
+  directories:
+    - ~/.cargo
