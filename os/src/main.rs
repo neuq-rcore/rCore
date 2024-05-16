@@ -126,6 +126,8 @@ fn main() {
 
     loader::load_apps();
 
+    debug!("Running user app `write` from sdcard.img");
+
     task::run_first_task();
 }
 

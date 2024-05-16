@@ -1,5 +1,7 @@
+use crate::mm::address::VirtAddr;
+
 use crate::{
-    config::{kernel_stack_position, TRAP_CONTEXT_VPN},
+    config::{kernel_stack_position, TRAP_CONTEXT},
     mm::{
         kernel_token, MapPermission, MemorySpace, PhysAddr, PhysPageNum, UserSpace, VirtPageNum,
         KERNEL_SPACE,
@@ -24,7 +26,7 @@ impl TaskControlBlock {
         // TODO: Don't know why unwrap fails.
         let trap_ctx_ppn = user_space
             .table()
-            .translate(VirtPageNum::from(TRAP_CONTEXT_VPN).into())
+            .translate(VirtAddr::from(TRAP_CONTEXT).into())
             .unwrap()
             .ppn();
 
