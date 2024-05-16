@@ -14,6 +14,13 @@ pub const MEMORY_END: usize = 0x8800_0000;
 
 // 跳板函数的地址，虚拟地址空间的最后一页
 pub const TRAMPOLINE: usize = usize::MAX - PAGE_SIZE + 1;
-pub const TRAP_CONTEXT: usize = TRAMPOLINE - PAGE_SIZE;
+pub const TRAP_CONTEXT_VPN: usize = TRAMPOLINE - PAGE_SIZE;
 
 pub use crate::boards::qemu::CLOCK_FREQ;
+
+pub const fn kernel_stack_position(app_id: usize) -> (usize, usize) {
+    let top = TRAMPOLINE - app_id * (KERNEL_STACK_SIZE + PAGE_SIZE);
+    let bottom = top - KERNEL_STACK_SIZE;
+    (bottom, top)
+}
+

@@ -4,16 +4,18 @@
     panic_info_message,
     slice_from_ptr_range,
     naked_functions,
-    alloc_error_handler
+    alloc_error_handler,
+    vec_into_raw_parts
 )]
 
 use core::{
     arch::{asm, global_asm},
-    panic, slice,
+    slice,
 };
 
-use alloc::string::String;
-use log::info;
+use alloc::{string::String, vec::Vec};
+use fatfs::Read;
+use log::{debug, info};
 use sbi::shutdown;
 
 use crate::fat32::Fat32FileSystem;
@@ -67,15 +69,64 @@ fn main() {
 
     println!("Files/Dirs in <root/>/riscv64/:");
 
-    for e in only_dir.iter() {
-        let e = e.unwrap();
-        let name = e.file_name();
+    let entries = only_dir.iter();
 
-        println!("  File/Dir: {}", name);
+    debug!("Filesystem initialized.");
+
+    let test_cases = vec!["write"];
+
+    for entry in entries {
+        if entry.is_err() {
+            continue;
+        }
+
+        let entry = entry.unwrap();
+        if entry.is_dir() {
+            continue;
+        }
+
+        let file_name = entry.file_name();
+
+        if file_name == "text.txt" {
+            let len = entry.len() as usize;
+            let mut buf: Vec<u8> = Vec::with_capacity(len);
+            unsafe {
+                buf.set_len(len)
+            }
+
+            let slice = buf.as_mut();
+            let mut file = entry.to_file();
+            file.read_exact(slice).unwrap();
+            let stringnified = String::from_utf8_lossy(slice);
+            println!("Text for `test.txt`:\n{}", stringnified);
+            continue;
+        }
+
+        for name in test_cases.iter() {
+            if file_name != *name {
+                continue;
+            }
+
+            let file_len = entry.len() as usize;
+            
+            let mut buf: Vec<u8> = Vec::with_capacity(file_len);
+            unsafe {
+                buf.set_len(file_len);
+            }
+
+            let slice = buf.as_mut();
+            let mut file = entry.to_file();
+
+            file.read_exact(slice).unwrap();
+
+            let id = loader::load_app(buf);
+            loader::add_pending_task(id).unwrap();
+        }
     }
 
-    // TODO: Implement user space task system
-    // task::run_first_task();
+    loader::load_apps();
+
+    task::run_first_task();
 }
 
 #[naked]
@@ -102,7 +153,6 @@ unsafe extern "C" fn __kernel_start_main() -> ! {
     mm::init();
 
     trap::init();
-    loader::load_apps();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
 
@@ -115,15 +165,11 @@ unsafe extern "C" fn __kernel_start_main() -> ! {
 
 fn debug_env() {
     use crate::sbi::console::UnionConsole;
-    use log::debug;
     use sbi_spec::base::impl_id;
 
     info!("Hello, world!");
 
-    debug!(
-        "SBI specification version: {0}",
-        sbi_rt::get_spec_version()
-    );
+    debug!("SBI specification version: {0}", sbi_rt::get_spec_version());
 
     let sbi_impl = sbi_rt::get_sbi_impl_id();
     let sbi_impl = match sbi_impl {

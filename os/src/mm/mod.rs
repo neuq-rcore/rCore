@@ -5,7 +5,7 @@ pub mod page;
 
 use crate::{
     boards::MMIO,
-    config::{TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE},
+    config::{TRAMPOLINE, TRAP_CONTEXT_VPN, USER_STACK_SIZE},
     sync::UPSafeCell,
 };
 use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
@@ -74,6 +74,10 @@ pub struct MemorySpace {
 }
 
 impl MemorySpace {
+    pub fn table(&self) -> &PageTable{
+        &self.page_table
+    }
+ 
     pub fn new_empty() -> Self {
         Self {
             page_table: PageTable::new(),
@@ -390,7 +394,7 @@ impl UserSpace {
         // map trap context with U flags
         user_space.push(
             MapArea::new(
-                TRAP_CONTEXT.into(),
+                TRAP_CONTEXT_VPN.into(),
                 TRAMPOLINE.into(),
                 MapType::Framed,
                 MapPermission::R | MapPermission::W,
