@@ -26,5 +26,5 @@ jobs:
       - name: Push to GitLab
         run: |
           git remote add gitlab https://${{ env.GITLAB_USER}}:${{ secrets.GITLAB_TOKEN }}@gitlab.eduxiji.net/neuqOS/neuq-rcore.git
-          git push --all gitlab
-          git push --tags gitlab
+          git push --force --all gitlab
+          git push --force --tags gitlab
