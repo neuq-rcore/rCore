@@ -50,7 +50,7 @@ impl TaskControlBlock {
 
         let trap_ctx = task_control_block.trap_ctx();
         *trap_ctx = TrapContext::app_init_context(
-            entry_point + APP_BASE_ADDRESS,
+            entry_point,
             user_sp,
             kernel_token,
             kernel_stack_top,

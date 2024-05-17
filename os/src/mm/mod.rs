@@ -377,7 +377,7 @@ impl UserSpace {
 
             let map_area = MapArea::new(start_va, end_va, MapType::Framed, permission);
 
-            max_end_vpn = map_area.range.end;
+            max_end_vpn = Ord::max(max_end_vpn, end_va.ceil());
 
             let end = (ph.offset() + ph.file_size()) as usize;
 
@@ -392,8 +392,8 @@ impl UserSpace {
         // guard page
         user_stack_bottom += PAGE_SIZE;
 
-        debug!("Mapping user stack at 0x{:08X}", user_stack_bottom);
         let user_stack_top = user_stack_bottom + USER_STACK_SIZE;
+        debug!("Mapping user stack 0x{:08X}..0x{:08X}", user_stack_bottom, user_stack_top);
         user_space.push(
             MapArea::new(
                 user_stack_bottom.into(),
@@ -404,7 +404,7 @@ impl UserSpace {
             None,
         );
 
-        debug!("Mapping user heap at 0x{:08X}", user_stack_top);
+        debug!("Mapping WTF");
         // used in sbrk
         user_space.push(
             MapArea::new(
@@ -441,7 +441,7 @@ impl UserSpace {
 
         (
             user_space,
-            user_stack_top,
+            user_stack_top - 1024,
             elf.header.pt2.entry_point() as usize,
         )
     }

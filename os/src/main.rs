@@ -87,21 +87,6 @@ fn main() {
 
         let file_name = entry.file_name();
 
-        if file_name == "text.txt" {
-            let len = entry.len() as usize;
-            let mut buf: Vec<u8> = Vec::with_capacity(len);
-            unsafe {
-                buf.set_len(len)
-            }
-
-            let slice = buf.as_mut();
-            let mut file = entry.to_file();
-            file.read_exact(slice).unwrap();
-            let stringnified = String::from_utf8_lossy(slice);
-            println!("Text for `test.txt`:\n{}", stringnified);
-            continue;
-        }
-
         for name in test_cases.iter() {
             if file_name != *name {
                 continue;
@@ -128,7 +113,6 @@ fn main() {
 
     debug!("Running user app `write` from sdcard.img");
 
-    // FIXME: Entry point is currently hard coded.
     task::run_first_task();
 }
 

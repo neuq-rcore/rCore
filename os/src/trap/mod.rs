@@ -2,7 +2,9 @@ mod context;
 
 use crate::config::TRAP_CONTEXT;
 use crate::syscall::syscall;
-use crate::task::{current_user_token, exit_current_and_run_next, suspend_current_and_run_next};
+use crate::task::{
+    current_trap_cx, current_user_token, exit_current_and_run_next, suspend_current_and_run_next,
+};
 use crate::timer::set_next_trigger;
 pub use context::TrapContext;
 use core::arch::{asm, global_asm};
@@ -38,44 +40,45 @@ pub fn enable_timer_interrupt() {
 }
 
 #[no_mangle]
-pub fn trap_handler(ctx: &mut TrapContext) -> &mut TrapContext {
-    let scause = scause::read();
-    let stval = stval::read();
-
-    // let _kernel_ctx = KernelTrapContext::enter();
-
-    match scause.cause() {
-        Trap::Interrupt(Interrupt::SupervisorTimer) => {
-            set_next_trigger();
-            suspend_current_and_run_next();
+pub fn trap_handler() -> ! {
+    {
+        let _kernel_ctx = KernelTrapContext::enter();
+        let scause = scause::read();
+        let stval = stval::read();
+        let ctx = current_trap_cx();
+    
+        match scause.cause() {
+            Trap::Exception(Exception::UserEnvCall) => {
+                ctx.sepc += 4;
+                ctx.x[10] = syscall(ctx.x[17], [ctx.x[10], ctx.x[11], ctx.x[12]]) as usize;
+            }
+            Trap::Exception(Exception::StoreFault)
+            | Trap::Exception(Exception::StorePageFault)
+            | Trap::Exception(Exception::LoadFault)
+            | Trap::Exception(Exception::LoadPageFault) => {
+                println!("[kernel] PageFault in application, bad addr = {:#x}, bad instruction = {:#x}, kernel killed it.", stval, ctx.sepc);
+                exit_current_and_run_next();
+            }
+            Trap::Exception(Exception::IllegalInstruction) => {
+                println!("[kernel] IllegalInstruction in application, kernel killed it.");
+                exit_current_and_run_next();
+            }
+            Trap::Interrupt(Interrupt::SupervisorTimer) => {
+                set_next_trigger();
+                suspend_current_and_run_next();
+            }
+            _ => {
+                panic!(
+                    "Unsupported trap {:?}, stval = {:#x}!",
+                    scause.cause(),
+                    stval
+                );
+            }
         }
-        Trap::Exception(Exception::UserEnvCall) => {
-            ctx.sepc += 4;
-            ctx.x[10] = syscall(ctx.x[17], [ctx.x[10], ctx.x[11], ctx.x[12]]) as usize;
-        }
-        Trap::Exception(Exception::StoreFault) | Trap::Exception(Exception::StorePageFault) => {
-            warn!(
-                "PageFault(0x{:016x}) in application, kernel killed it.",
-                stval
-            );
-            exit_current_and_run_next();
-        }
-        Trap::Exception(Exception::IllegalInstruction) => {
-            warn!("IllegalInstruction in application, kernel killed it.");
-            exit_current_and_run_next();
-        }
-        _ => {
-            panic!(
-                "Unsupported trap {:?}, stval = {:#x}!",
-                scause.cause(),
-                stval
-            );
-        }
+        // drop _kernel_ctx to restore user trap
     }
 
-    // drop _kernel_ctx to restore user trap
-    // trap_return();
-    ctx
+    unreachable!()
 }
 
 struct KernelTrapContext;
@@ -217,8 +220,8 @@ pub unsafe extern "C" fn __snap_trap() -> ! {
         "sd t0, 16(sp)",     // x2
         // Snap end, load kernel registers and jump to kernel trap handler
         "ld t1, 288(sp)", // Address of `trap_handler`
-        "ld sp, 280(sp)", // Kernel stack
         "ld t0, 272(sp)", // kernel_token(root ppn)
+        "ld sp, 280(sp)", // Kernel stack
         "csrw satp, t0",
         // Clear tlbs as we are entering new context(Kernel Space)
         "sfence.vma",
@@ -232,7 +235,8 @@ pub unsafe extern "C" fn __snap_trap() -> ! {
 #[naked]
 #[no_mangle]
 #[link_section = ".text.trampoline"]
-pub unsafe extern "C" fn __restore_snap(/*context_snap: *const TrapContext, user_token: usize*/) -> ! {
+pub unsafe extern "C" fn __restore_snap(/*context_snap: *const TrapContext, user_token: usize*/) -> !
+{
     // see `__snap_trap` for the stack layout
     asm!(
         // Return to user space(but still in Supervisor mode)

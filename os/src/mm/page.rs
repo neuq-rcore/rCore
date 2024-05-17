@@ -109,6 +109,36 @@ impl PageTable {
         })
     }
 
+    pub fn translate_bytes(token: usize, buf: &[u8]) -> Vec<&'static [u8]> {
+        let page_table = PageTable::from_token(token);
+        let mut start = buf.as_ptr() as usize;
+        let end = start + buf.len();
+
+        let mut v = Vec::new();
+
+        while start < end {
+            let start_va = VirtAddr::from(start);
+            let mut vpn = start_va.floor();
+
+            let ppn = page_table
+                .translate(vpn)
+                .unwrap()
+                .ppn();
+
+            vpn = VirtPageNum(vpn.0 + 1);
+            let mut end_va: VirtAddr = vpn.into();
+            end_va = end_va.min(VirtAddr::from(end));
+            if end_va.page_offset() == 0 {
+                v.push(&ppn.as_page_bytes_slice()[start_va.page_offset()..]);
+            } else {
+                v.push(&ppn.as_page_bytes_slice()[start_va.page_offset()..end_va.page_offset()]);
+            }
+            start = end_va.into();
+        }
+
+        v
+    }
+
     pub fn from_token(stap: usize) -> Self {
         let root_ppn = PhysPageNum(stap & ((1 << 44) - 1));
         Self {
