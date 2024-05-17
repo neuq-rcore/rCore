@@ -39,6 +39,7 @@ jobs:
         run: mv test/sdcard.img .
 
       - name: Run Qemu test
+        timeout-minutes: 10
         run: |
           qemu-system-riscv64 -machine virt \
             -m 128M -nographic -smp 2 \
