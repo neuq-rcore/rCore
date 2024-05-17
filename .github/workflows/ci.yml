@@ -45,6 +45,7 @@ jobs:
           qemu-system-riscv64 --version
 
       - name: Run
+        timeout-minutes: 10
         run: make run LOG=TRACE
 
   code-style:
