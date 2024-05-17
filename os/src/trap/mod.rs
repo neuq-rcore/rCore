@@ -5,7 +5,7 @@ use crate::syscall::syscall;
 use crate::task::{current_user_token, exit_current_and_run_next, suspend_current_and_run_next};
 use crate::timer::set_next_trigger;
 pub use context::TrapContext;
-use core::arch::asm;
+use core::arch::{asm, global_asm};
 use log::{debug, warn};
 use riscv::register::{
     mtvec::TrapMode,
@@ -42,7 +42,7 @@ pub fn trap_handler(ctx: &mut TrapContext) -> &mut TrapContext {
     let scause = scause::read();
     let stval = stval::read();
 
-    let _kernel_ctx = KernelTrapContext::enter();
+    // let _kernel_ctx = KernelTrapContext::enter();
 
     match scause.cause() {
         Trap::Interrupt(Interrupt::SupervisorTimer) => {
@@ -74,6 +74,7 @@ pub fn trap_handler(ctx: &mut TrapContext) -> &mut TrapContext {
     }
 
     // drop _kernel_ctx to restore user trap
+    // trap_return();
     ctx
 }
 
@@ -91,13 +92,17 @@ impl Drop for KernelTrapContext {
     }
 }
 
+#[no_mangle]
 #[allow(unreachable_code)]
 pub fn trap_return() -> ! {
     set_user_trap();
     let trap_ctx = TRAP_CONTEXT;
     let user_satp = current_user_token();
 
-    let restore_va = __restore_snap as usize - __snap_trap as usize + TRAMPOLINE;
+    let restore_va = __restore_snap as usize;// - __snap_trap as usize + TRAMPOLINE;
+
+    debug!("restore_va: {:#x}", restore_va);
+    debug!("user_satp: {:#x}", user_satp);
 
     unsafe {
         asm!(
@@ -126,6 +131,12 @@ fn kernel_trap_intenral() -> ! {
     panic!("Exception from kernel!")
 }
 
+// global_asm!(include_str!("trap.S"));
+
+// extern "C" {
+//     pub fn __snap_trap();
+//     pub fn __restore_snap();
+// }
 #[naked]
 #[no_mangle]
 #[link_section = ".text.trampoline"]

@@ -128,6 +128,7 @@ fn main() {
 
     debug!("Running user app `write` from sdcard.img");
 
+    // FIXME: Entry point is currently hard coded.
     task::run_first_task();
 }
 

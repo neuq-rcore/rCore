@@ -352,8 +352,10 @@ impl UserSpace {
         );
 
         let mut max_end_vpn = VirtPageNum(0);
+        let ph_count = header.pt2.ph_count();
 
-        for ph in elf.program_iter() {
+        for i in 0..ph_count {
+            let ph = elf.program_header(i).unwrap();
             if ph.get_type().unwrap() != xmas_elf::program::Type::Load {
                 continue;
             }
@@ -361,8 +363,17 @@ impl UserSpace {
             let start_va = VirtAddr(ph.virtual_addr() as usize);
             let end_va = VirtAddr(ph.virtual_addr() as usize + ph.mem_size() as usize);
 
-            let mut permission = MapPermission::from_bits_truncate(ph.flags().0 as u8);
-            permission |= MapPermission::U;
+            let mut permission = MapPermission::U;
+            let ph_flags = ph.flags();
+            if ph_flags.is_read() {
+                permission |= MapPermission::R;
+            }
+            if ph_flags.is_write() {
+                permission |= MapPermission::W;
+            }
+            if ph_flags.is_execute() {
+                permission |= MapPermission::X;
+            }                
 
             let map_area = MapArea::new(start_va, end_va, MapType::Framed, permission);
 
@@ -384,6 +395,17 @@ impl UserSpace {
         user_space.push(
             MapArea::new(
                 user_stack_bottom.into(),
+                user_stack_top.into(),
+                MapType::Framed,
+                MapPermission::R | MapPermission::W | MapPermission::U,
+            ),
+            None,
+        );
+
+        // used in sbrk
+        user_space.push(
+            MapArea::new(
+                user_stack_top.into(),
                 user_stack_top.into(),
                 MapType::Framed,
                 MapPermission::R | MapPermission::W | MapPermission::U,

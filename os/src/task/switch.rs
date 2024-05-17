@@ -3,7 +3,7 @@ use core::arch::asm;
 
 #[naked]
 #[no_mangle]
-pub unsafe extern "C" fn __switch(current_task_ctx_ptr: *mut TaskContext, next_task_ctx_ptr: *const TaskContext) -> ! {
+pub unsafe extern "C" fn __switch(current_task_ctx_ptr: *mut TaskContext, next_task_ctx_ptr: *const TaskContext) {
     asm!(
         // store sp
         "sd sp, 8(a0)",
@@ -39,6 +39,7 @@ pub unsafe extern "C" fn __switch(current_task_ctx_ptr: *mut TaskContext, next_t
         "ld s11, 104(a1)",
         // restore sp
         "ld sp, 8(a1)",
+        "ret",
         options(noreturn)
     );
 }

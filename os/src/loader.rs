@@ -81,8 +81,10 @@ pub fn load_apps() {
 
     for id in 0..num_app {
         let base_i = get_base_i(id);
+
         (base_i..base_i + APP_SIZE_LIMIT)
             .for_each(|addr| unsafe { (addr as *mut u8).write_volatile(0) });
+
         let src = get_app_elf_data(id).unwrap();
         let dst = unsafe { core::slice::from_raw_parts_mut(base_i as *mut u8, src.len()) };
         dst.copy_from_slice(src);

@@ -1,3 +1,4 @@
+use crate::config::APP_BASE_ADDRESS;
 use crate::mm::address::VirtAddr;
 
 use crate::{
@@ -23,7 +24,6 @@ impl TaskControlBlock {
     pub fn new(elf_bytes: &[u8], app_id: usize) -> Self {
         let (user_space, user_sp, entry_point) = UserSpace::from_elf(elf_bytes);
 
-        // TODO: Don't know why unwrap fails.
         let trap_ctx_ppn = user_space
             .table()
             .translate(VirtAddr::from(TRAP_CONTEXT).into())
@@ -50,7 +50,7 @@ impl TaskControlBlock {
 
         let trap_ctx = task_control_block.trap_ctx();
         *trap_ctx = TrapContext::app_init_context(
-            entry_point,
+            entry_point + APP_BASE_ADDRESS,
             user_sp,
             kernel_token,
             kernel_stack_top,
