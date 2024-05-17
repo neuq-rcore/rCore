@@ -1,6 +1,6 @@
 mod context;
 
-use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
+use crate::config::TRAP_CONTEXT;
 use crate::syscall::syscall;
 use crate::task::{current_user_token, exit_current_and_run_next, suspend_current_and_run_next};
 use crate::timer::set_next_trigger;
@@ -99,7 +99,7 @@ pub fn trap_return() -> ! {
     let trap_ctx = TRAP_CONTEXT;
     let user_satp = current_user_token();
 
-    let restore_va = __restore_snap as usize;// - __snap_trap as usize + TRAMPOLINE;
+    let restore_va: usize = __restore_snap as usize;
 
     debug!("restore_va: {:#x}", restore_va);
     debug!("user_satp: {:#x}", user_satp);

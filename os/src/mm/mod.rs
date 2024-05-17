@@ -74,10 +74,10 @@ pub struct MemorySpace {
 }
 
 impl MemorySpace {
-    pub fn table(&self) -> &PageTable{
+    pub fn table(&self) -> &PageTable {
         &self.page_table
     }
- 
+
     pub fn new_empty() -> Self {
         Self {
             page_table: PageTable::new(),
@@ -106,6 +106,19 @@ impl MemorySpace {
         let map_area = MapArea::new(start_va, end_va, MapType::Framed, permission);
         self.push(map_area, None);
     }
+
+    pub fn map_trampoline(&mut self) {
+        extern "C" {
+            fn strampoline();
+        }
+
+        self.page_table.map(
+            VirtAddr::from(TRAMPOLINE).into(),
+            PhysAddr::from(strampoline as usize).into(),
+            PageTableEntryFlags::R | PageTableEntryFlags::X ,
+        );
+    }
+
 }
 
 impl MapArea {
@@ -210,7 +223,7 @@ impl KernelSpace {
 
         let mut kernel_space = MemorySpace::new_empty();
 
-        Self::map_trampoline(&mut kernel_space);
+        kernel_space.map_trampoline();
 
         debug!(
             "Mapping .text, 0x{:08X}..0x{:08X}",
@@ -299,18 +312,6 @@ impl KernelSpace {
         kernel_space
     }
 
-    pub fn map_trampoline(mem_space: &mut MemorySpace) {
-        extern "C" {
-            fn strampoline();
-        }
-
-        mem_space.page_table.map(
-            VirtAddr::from(TRAMPOLINE).into(),
-            PhysAddr::from(strampoline as usize).into(),
-            PageTableEntryFlags::R | PageTableEntryFlags::X,
-        );
-    }
-
     pub fn activate() {
         let satp = kernel_token();
 
@@ -339,7 +340,7 @@ impl UserSpace {
     pub fn from_elf(elf_data: &[u8]) -> (MemorySpace, usize, usize) {
         let mut user_space = MemorySpace::new_empty();
 
-        KernelSpace::map_trampoline(&mut user_space);
+        user_space.map_trampoline();
 
         let elf = xmas_elf::ElfFile::new(elf_data).unwrap();
         let header = elf.header;
@@ -352,10 +353,9 @@ impl UserSpace {
         );
 
         let mut max_end_vpn = VirtPageNum(0);
-        let ph_count = header.pt2.ph_count();
 
-        for i in 0..ph_count {
-            let ph = elf.program_header(i).unwrap();
+        for ph in elf.program_iter() {
+            debug!("ph: {:?}", ph);
             if ph.get_type().unwrap() != xmas_elf::program::Type::Load {
                 continue;
             }
@@ -373,16 +373,17 @@ impl UserSpace {
             }
             if ph_flags.is_execute() {
                 permission |= MapPermission::X;
-            }                
+            }
 
             let map_area = MapArea::new(start_va, end_va, MapType::Framed, permission);
 
-            max_end_vpn = max_end_vpn.max(map_area.range.end);
+            max_end_vpn = map_area.range.end;
 
             let end = (ph.offset() + ph.file_size()) as usize;
 
             user_space.push(map_area, Some(&elf_data[ph.offset() as usize..end]));
         }
+        debug!("End of ELF segments");
 
         // map user stack with U flags
         let max_end_va: VirtAddr = max_end_vpn.into();
@@ -391,6 +392,7 @@ impl UserSpace {
         // guard page
         user_stack_bottom += PAGE_SIZE;
 
+        debug!("Mapping user stack at 0x{:08X}", user_stack_bottom);
         let user_stack_top = user_stack_bottom + USER_STACK_SIZE;
         user_space.push(
             MapArea::new(
@@ -402,6 +404,7 @@ impl UserSpace {
             None,
         );
 
+        debug!("Mapping user heap at 0x{:08X}", user_stack_top);
         // used in sbrk
         user_space.push(
             MapArea::new(
@@ -413,6 +416,7 @@ impl UserSpace {
             None,
         );
 
+        debug!("Mapping user trap context at 0x{:08X}", TRAP_CONTEXT);
         // map trap context with U flags
         user_space.push(
             MapArea::new(
@@ -422,6 +426,17 @@ impl UserSpace {
                 MapPermission::R | MapPermission::W,
             ),
             None,
+        );
+
+        extern "C" {
+            fn strampoline();
+        }
+
+        // To allow instructions in `__restore_snap` to be executed
+        user_space.page_table.map(
+            VirtAddr::from(strampoline as usize).into(),
+            PhysAddr::from(strampoline as usize).into(),
+            PageTableEntryFlags::R | PageTableEntryFlags::X,
         );
 
         (
