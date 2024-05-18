@@ -69,7 +69,7 @@ fn main() {
 
     debug!("Filesystem initialized.");
 
-    let test_cases = vec!["write", "gettimeofday", "sleep", "getpid", "getppid", "uname"];
+    let test_cases = vec!["write", "gettimeofday", "sleep", "getpid", "getppid", "uname", "times"];
 
     for entry in entries {
         if entry.is_err() {

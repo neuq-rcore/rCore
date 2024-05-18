@@ -6,6 +6,7 @@ const SYSCALL_NANOSLEEP: usize = 101;
 const SYSCALL_UNAME: usize = 160;
 const SYSCALL_GETPID: usize = 172;
 const SYSCALL_GETPPID: usize = 173;
+const SYSCALL_TIMES: usize = 153;
 
 mod fs;
 mod process;
@@ -25,6 +26,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
         SYSCALL_EXIT => sys_exit(args[0] as i32),
         SYSCALL_YIELD => sys_yield(),
+        SYSCALL_TIMES => sys_times(args[0]),
         SYSCALL_GET_TIME => sys_get_time(args[0] as *mut TimeVal, args[1] as i32),
         SYSCALL_NANOSLEEP => sys_nanosleep(args[0] as *mut TimeVal, args[1] as *mut TimeVal),
         SYSCALL_UNAME => sys_uname(args[0] as *mut Utsname),

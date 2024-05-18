@@ -60,3 +60,32 @@ pub fn sys_get_time(ts: *mut TimeVal, _tz: i32) -> isize {
         }
     }
 }
+
+#[repr(C)]
+struct Tms              
+{                     
+	tms_utime: i64,
+	tms_stime: i64,
+	tms_cutime: i64,
+	tms_cstime: i64,
+}
+
+pub fn sys_times(tms: usize) -> isize {
+    match tms == 0 {
+        true => -1,
+        false => {
+            let user_token = current_user_token();
+            let len = core::mem::size_of::<Tms>();
+            let tm = Tms {
+                tms_utime: 0,
+                tms_stime: 0,
+                tms_cutime: 0,
+                tms_cstime: 0,
+            };
+
+            PageTable::copy_to_space(user_token, &tm as *const _ as *const u8, tms as *mut u8, len);
+
+            0
+        }
+    }
+}
