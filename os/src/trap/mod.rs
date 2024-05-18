@@ -7,8 +7,8 @@ use crate::task::{
 };
 use crate::timer::set_next_trigger;
 pub use context::TrapContext;
-use core::arch::{asm, global_asm};
-use log::{debug, warn};
+use core::arch::{asm};
+use log::debug;
 use riscv::register::{
     mtvec::TrapMode,
     scause::{self, Exception, Interrupt, Trap},
