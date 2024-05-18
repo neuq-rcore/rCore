@@ -65,11 +65,7 @@ fn main() {
 
     let root_dir = fs.root_dir();
 
-    let only_dir = root_dir.iter().next().unwrap().unwrap().to_dir();
-
-    println!("Files/Dirs in <root/>/riscv64/:");
-
-    let entries = only_dir.iter();
+    let entries = root_dir.iter();
 
     debug!("Filesystem initialized.");
 
