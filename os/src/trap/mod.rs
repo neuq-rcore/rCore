@@ -106,6 +106,7 @@ pub fn trap_return() -> ! {
 
     debug!("restore_va: {:#x}", restore_va);
     debug!("user_satp: {:#x}", user_satp);
+    debug!("Returning to user mode");
 
     unsafe {
         asm!(
