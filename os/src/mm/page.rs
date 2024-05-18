@@ -1,4 +1,8 @@
-use alloc::vec::Vec;
+use core::mem;
+
+use alloc::{slice, vec::Vec};
+
+use crate::config::PAGE_SIZE;
 
 use super::{
     address::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum},
@@ -120,10 +124,7 @@ impl PageTable {
             let start_va = VirtAddr::from(start);
             let mut vpn = start_va.floor();
 
-            let ppn = page_table
-                .translate(vpn)
-                .unwrap()
-                .ppn();
+            let ppn = page_table.translate(vpn).unwrap().ppn();
 
             vpn = VirtPageNum(vpn.0 + 1);
             let mut end_va: VirtAddr = vpn.into();
@@ -137,6 +138,84 @@ impl PageTable {
         }
 
         v
+    }
+
+    pub fn copy_to_space(token: usize, src: *const u8, dst: *mut u8, len: usize) -> usize {
+        let page_table = PageTable::from_token(token);
+        let start = dst as usize;
+        let mut copied_bytes = 0;
+
+        while copied_bytes < len {
+            let start_va = VirtAddr::from(dst as usize + copied_bytes);
+            let mut vpn = start_va.floor();
+
+            let ppn = page_table.translate(vpn).unwrap().ppn();
+
+            // step in
+            vpn = VirtPageNum(vpn.0 + 1);
+
+            let mut end_va: VirtAddr = vpn.into();
+            end_va = end_va.min(VirtAddr::from(start + len));
+
+            let end_va_offset = end_va.page_offset();
+            let start_va_offset = start_va.page_offset();
+
+            let bytes_this_page = if end_va_offset == 0 {
+                PAGE_SIZE - start_va_offset
+            } else {
+                end_va_offset - start_va_offset
+            };
+
+            let src = unsafe {
+                slice::from_raw_parts((src as usize + copied_bytes) as *const u8, bytes_this_page)
+            };
+            let dst =
+                &mut ppn.as_page_bytes_slice()[start_va_offset..start_va_offset + bytes_this_page];
+
+            dst.copy_from_slice(src);
+
+            copied_bytes += bytes_this_page;
+        }
+
+        copied_bytes
+    }
+
+    pub fn copy_from_space(token: usize, src: *const u8, dst: *mut u8, len: usize) -> usize {
+        let page_table = PageTable::from_token(token);
+        let start = src as usize;
+        let mut copied_bytes = 0;
+
+
+        while copied_bytes < len {
+            let start_va = VirtAddr::from(src as usize + copied_bytes);
+            let mut vpn = start_va.floor();
+
+            let ppn = page_table.translate(vpn).unwrap().ppn();
+
+            // step in
+            vpn = VirtPageNum(vpn.0 + 1);
+
+            let mut end_va: VirtAddr = vpn.into();
+            end_va = end_va.min(VirtAddr::from(start + len));
+
+            let end_va_offset = end_va.page_offset();
+            let start_va_offset = start_va.page_offset();
+
+            let bytes_this_page = if end_va_offset == 0 {
+                PAGE_SIZE - start_va_offset
+            } else {
+                end_va_offset - start_va_offset
+            };
+
+            let src = &ppn.as_page_bytes_slice()[start_va_offset..start_va_offset + bytes_this_page];
+            let dst = unsafe { slice::from_raw_parts_mut((dst as usize + copied_bytes) as *mut u8, bytes_this_page) };
+
+            dst.copy_from_slice(src);
+
+            copied_bytes += bytes_this_page;
+        }
+
+        copied_bytes
     }
 
     pub fn from_token(stap: usize) -> Self {

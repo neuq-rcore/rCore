@@ -9,7 +9,7 @@
 )]
 
 use core::{
-    arch::{asm, global_asm},
+    arch::asm,
     slice,
 };
 
@@ -69,7 +69,7 @@ fn main() {
 
     debug!("Filesystem initialized.");
 
-    let test_cases = vec!["write"];
+    let test_cases = vec!["write", "gettimeofday", "sleep", "getpid", "getppid", "uname"];
 
     for entry in entries {
         if entry.is_err() {
@@ -136,8 +136,8 @@ unsafe extern "C" fn __kernel_start_main() -> ! {
     mm::init();
 
     trap::init();
-    trap::enable_timer_interrupt();
-    timer::set_next_trigger();
+    // trap::enable_timer_interrupt();
+    // timer::set_next_trigger();
 
     debug_env();
 

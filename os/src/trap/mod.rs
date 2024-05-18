@@ -132,7 +132,9 @@ unsafe extern "C" fn on_kernel_trap() -> ! {
 
 #[no_mangle]
 fn kernel_trap_intenral() -> ! {
-    panic!("Exception from kernel!")
+    let scause = scause::read();
+    let stval = stval::read();
+    panic!("Exception from kernel!, scause: {}, stval: {:#x}", scause.bits(), stval);
 }
 
 // global_asm!(include_str!("trap.S"));

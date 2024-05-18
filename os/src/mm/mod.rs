@@ -184,13 +184,16 @@ impl MapArea {
         let mut vpn: usize = self.range.start.0;
 
         while copied < len {
+            use log::*;
+            info!("len: {}, copied: {}", len, copied);
+
             let len = Ord::min(len, copied + PAGE_SIZE);
             let src = &data[copied..len];
             let dst = &mut page_table
                 .translate(VirtPageNum(vpn))
                 .unwrap()
                 .ppn()
-                .as_page_bytes_slice()[..len];
+                .as_page_bytes_slice()[..len - copied];
 
             dst.copy_from_slice(src);
 
