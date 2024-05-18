@@ -9,10 +9,8 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
         FD_STDOUT => {
             let buf = unsafe { slice::from_raw_parts(buf, len) };
             let user_space_token = current_user_token();
-            let buf = PageTable::translate_bytes(user_space_token, buf);
-            for b in buf {
-                print!("{}", core::str::from_utf8(b).unwrap());
-            }
+            let buf = PageTable::translate_bytes(user_space_token, buf).concat();
+            print!("{}", core::str::from_utf8(buf.as_slice()).unwrap());
             len as isize
         }
         _ => {
