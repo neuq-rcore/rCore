@@ -6,3 +6,30 @@ rustflags = [
 	"-C", "link-arg=-Tsrc/linker-qemu.ld", 
 	"-C", "force-frame-pointers=yes"
 ]
+
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/neuq-rcore/buddy_system_allocator"]
+git = "https://github.com/neuq-rcore/buddy_system_allocator"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/neuq-rcore/rust-fatfs"]
+git = "https://github.com/neuq-rcore/rust-fatfs"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/nrc/xmas-elf.git"]
+git = "https://github.com/nrc/xmas-elf.git"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/rcore-os/riscv"]
+git = "https://github.com/rcore-os/riscv"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/rcore-os/virtio-drivers?rev=4ee80e5"]
+git = "https://github.com/rcore-os/virtio-drivers"
+rev = "4ee80e5"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "../thirdparty/"

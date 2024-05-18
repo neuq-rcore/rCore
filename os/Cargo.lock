@@ -45,11 +45,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf4b9d6a944f767f8e5e0db018570623c85f3d925ac718db4e06d0187adb21c1"
 
 [[package]]
-name = "bitflags"
-version = "2.5.0"
-source = "git+https://github.com/neuq-rcore/bitflags#393be7bd22a2cc252d4e0cc2e69ca4a9a21c362d"
-
-[[package]]
 name = "buddy_system_allocator"
 version = "0.9.1"
 source = "git+https://github.com/neuq-rcore/buddy_system_allocator#7b49a0efceac84b9df57cc18fc6e790c3e03ab77"
@@ -62,7 +57,7 @@ name = "fatfs"
 version = "0.4.0"
 source = "git+https://github.com/neuq-rcore/rust-fatfs#85f06e08edbd3368e1b0562f2fc1b6d178bf7b8a"
 dependencies = [
- "bitflags 2.5.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "bitflags 2.5.0",
  "log",
 ]
 
@@ -101,7 +96,7 @@ checksum = "6c8640c5d730cb13ebd907d8d04b52f55ac9a2eec55b440c8892f40d56c76c1d"
 name = "os"
 version = "0.1.0"
 dependencies = [
- "bitflags 2.5.0 (git+https://github.com/neuq-rcore/bitflags)",
+ "bitflags 2.5.0",
  "buddy_system_allocator",
  "fatfs",
  "lazy_static",
