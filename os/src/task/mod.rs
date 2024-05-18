@@ -4,11 +4,13 @@ mod switch;
 #[allow(clippy::module_inception)]
 mod task;
 
-use crate::config::MAX_APP_NUM;
-use crate::loader::{get_num_app, init_app_cx};
+use crate::loader::get_app_elf_data;
+use crate::{loader::get_num_app, trap::TrapContext};
 use crate::sbi::shutdown;
 use crate::sync::UPSafeCell;
+use alloc::vec::Vec;
 use lazy_static::*;
+use log::debug;
 use switch::__switch;
 use task::{TaskControlBlock, TaskStatus};
 
@@ -20,20 +22,20 @@ pub struct TaskManager {
 }
 
 pub struct TaskManagerInner {
-    tasks: [TaskControlBlock; MAX_APP_NUM],
+    tasks: Vec<TaskControlBlock>,
     current_task: usize,
 }
 
 lazy_static! {
     pub static ref TASK_MANAGER: TaskManager = {
         let num_app = get_num_app();
-        let mut tasks = [TaskControlBlock {
-            task_cx: TaskContext::zero_init(),
-            task_status: TaskStatus::UnInit,
-        }; MAX_APP_NUM];
-        for (i, task) in tasks.iter_mut().enumerate() {
-            task.task_cx = TaskContext::goto_restore(init_app_cx(i));
-            task.task_status = TaskStatus::Ready;
+        debug!("App nums: {}", num_app);
+        let mut tasks: Vec<TaskControlBlock> = Vec::new();
+        for i in 0..num_app {
+            tasks.push(TaskControlBlock::new(
+                get_app_elf_data(i).unwrap(),
+                i,
+            ));
         }
         TaskManager {
             num_app,
@@ -52,11 +54,11 @@ impl TaskManager {
         let mut inner = self.inner.exclusive_access();
         let task0 = &mut inner.tasks[0];
         task0.task_status = TaskStatus::Running;
-        let next_task_cx_ptr = &task0.task_cx as *const TaskContext;
+        let next_task_ctx_ptr = &task0.task_ctx as *const TaskContext;
         drop(inner);
         let mut _unused = TaskContext::zero_init();
         unsafe {
-            __switch(&mut _unused as *mut TaskContext, next_task_cx_ptr);
+            __switch(&mut _unused as *mut TaskContext, next_task_ctx_ptr);
         }
         panic!("unreachable in run_first_task!");
     }
@@ -87,17 +89,37 @@ impl TaskManager {
             let current = inner.current_task;
             inner.tasks[next].task_status = TaskStatus::Running;
             inner.current_task = next;
-            let current_task_cx_ptr = &mut inner.tasks[current].task_cx as *mut TaskContext;
-            let next_task_cx_ptr = &inner.tasks[next].task_cx as *const TaskContext;
+            let current_task_ctx_ptr = &mut inner.tasks[current].task_ctx as *mut TaskContext;
+            let next_task_ctx_ptr = &inner.tasks[next].task_ctx as *const TaskContext;
             drop(inner);
             unsafe {
-                __switch(current_task_cx_ptr, next_task_cx_ptr);
+                __switch(current_task_ctx_ptr, next_task_ctx_ptr);
             }
         } else {
             println!("All applications completed!");
             shutdown(false);
         }
     }
+
+    fn get_current_token(&self) -> usize {
+        let inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].memory_space.token()
+    }
+
+    fn get_current_trap_cx(&self) -> &mut TrapContext {
+        let inner = self.inner.exclusive_access();
+        let current = inner.current_task;
+        inner.tasks[current].trap_ctx()
+    }
+}
+
+pub fn current_user_token() -> usize {
+    TASK_MANAGER.get_current_token()
+}
+
+pub fn current_trap_cx() -> &'static mut TrapContext {
+    TASK_MANAGER.get_current_trap_cx()
 }
 
 pub fn run_first_task() {

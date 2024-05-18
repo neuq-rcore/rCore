@@ -4,10 +4,10 @@ use alloc::boxed::Box;
 
 use virt::VirtioDisk;
 
+use log::debug;
 use crate::driver::virt::VIRTIO0;
 use fatfs::{
-    FileSystem, FsOptions, IoBase, LossyOemCpConverter, NullTimeProvider, Read, Seek, SeekFrom,
-    Write,
+    FileSystem, FsOptions, IoBase, LossyOemCpConverter, NullTimeProvider, Read, Seek, SeekFrom, Write
 };
 use virtio_drivers::{VirtIOBlk, VirtIOHeader};
 
@@ -22,7 +22,7 @@ impl Fat32FileSystem {
 
         let header = unsafe { &mut *(va as *mut VirtIOHeader) };
 
-        println!("[Disk] Valid: {:}", header.verify());
+        debug!("[Disk] Valid: {:}", header.verify());
         assert!(header.verify(), "Header is not valid");
 
         let blk = VirtIOBlk::new(header).expect("Failed to create VirtIOBlk");

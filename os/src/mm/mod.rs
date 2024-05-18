@@ -74,6 +74,10 @@ pub struct MemorySpace {
 }
 
 impl MemorySpace {
+    pub fn table(&self) -> &PageTable {
+        &self.page_table
+    }
+
     pub fn new_empty() -> Self {
         Self {
             page_table: PageTable::new(),
@@ -102,6 +106,19 @@ impl MemorySpace {
         let map_area = MapArea::new(start_va, end_va, MapType::Framed, permission);
         self.push(map_area, None);
     }
+
+    pub fn map_trampoline(&mut self) {
+        extern "C" {
+            fn strampoline();
+        }
+
+        self.page_table.map(
+            VirtAddr::from(TRAMPOLINE).into(),
+            PhysAddr::from(strampoline as usize).into(),
+            PageTableEntryFlags::R | PageTableEntryFlags::X ,
+        );
+    }
+
 }
 
 impl MapArea {
@@ -206,7 +223,7 @@ impl KernelSpace {
 
         let mut kernel_space = MemorySpace::new_empty();
 
-        Self::map_trampoline(&mut kernel_space);
+        kernel_space.map_trampoline();
 
         debug!(
             "Mapping .text, 0x{:08X}..0x{:08X}",
@@ -295,18 +312,6 @@ impl KernelSpace {
         kernel_space
     }
 
-    pub fn map_trampoline(mem_space: &mut MemorySpace) {
-        extern "C" {
-            fn strampoline();
-        }
-
-        mem_space.page_table.map(
-            VirtAddr::from(TRAMPOLINE).into(),
-            PhysAddr::from(strampoline as usize).into(),
-            PageTableEntryFlags::R | PageTableEntryFlags::X,
-        );
-    }
-
     pub fn activate() {
         let satp = kernel_token();
 
@@ -335,7 +340,7 @@ impl UserSpace {
     pub fn from_elf(elf_data: &[u8]) -> (MemorySpace, usize, usize) {
         let mut user_space = MemorySpace::new_empty();
 
-        KernelSpace::map_trampoline(&mut user_space);
+        user_space.map_trampoline();
 
         let elf = xmas_elf::ElfFile::new(elf_data).unwrap();
         let header = elf.header;
@@ -350,6 +355,7 @@ impl UserSpace {
         let mut max_end_vpn = VirtPageNum(0);
 
         for ph in elf.program_iter() {
+            debug!("ph: {:?}", ph);
             if ph.get_type().unwrap() != xmas_elf::program::Type::Load {
                 continue;
             }
@@ -357,17 +363,27 @@ impl UserSpace {
             let start_va = VirtAddr(ph.virtual_addr() as usize);
             let end_va = VirtAddr(ph.virtual_addr() as usize + ph.mem_size() as usize);
 
-            let mut permission = MapPermission::from_bits_truncate(ph.flags().0 as u8);
-            permission |= MapPermission::U;
+            let mut permission = MapPermission::U;
+            let ph_flags = ph.flags();
+            if ph_flags.is_read() {
+                permission |= MapPermission::R;
+            }
+            if ph_flags.is_write() {
+                permission |= MapPermission::W;
+            }
+            if ph_flags.is_execute() {
+                permission |= MapPermission::X;
+            }
 
             let map_area = MapArea::new(start_va, end_va, MapType::Framed, permission);
 
-            max_end_vpn = max_end_vpn.max(map_area.range.end);
+            max_end_vpn = Ord::max(max_end_vpn, end_va.ceil());
 
             let end = (ph.offset() + ph.file_size()) as usize;
 
             user_space.push(map_area, Some(&elf_data[ph.offset() as usize..end]));
         }
+        debug!("End of ELF segments");
 
         // map user stack with U flags
         let max_end_va: VirtAddr = max_end_vpn.into();
@@ -377,6 +393,7 @@ impl UserSpace {
         user_stack_bottom += PAGE_SIZE;
 
         let user_stack_top = user_stack_bottom + USER_STACK_SIZE;
+        debug!("Mapping user stack 0x{:08X}..0x{:08X}", user_stack_bottom, user_stack_top);
         user_space.push(
             MapArea::new(
                 user_stack_bottom.into(),
@@ -387,6 +404,19 @@ impl UserSpace {
             None,
         );
 
+        debug!("Mapping WTF");
+        // used in sbrk
+        user_space.push(
+            MapArea::new(
+                user_stack_top.into(),
+                user_stack_top.into(),
+                MapType::Framed,
+                MapPermission::R | MapPermission::W | MapPermission::U,
+            ),
+            None,
+        );
+
+        debug!("Mapping user trap context at 0x{:08X}", TRAP_CONTEXT);
         // map trap context with U flags
         user_space.push(
             MapArea::new(
@@ -398,9 +428,20 @@ impl UserSpace {
             None,
         );
 
+        extern "C" {
+            fn strampoline();
+        }
+
+        // To allow instructions in `__restore_snap` to be executed
+        user_space.page_table.map(
+            VirtAddr::from(strampoline as usize).into(),
+            PhysAddr::from(strampoline as usize).into(),
+            PageTableEntryFlags::R | PageTableEntryFlags::X,
+        );
+
         (
             user_space,
-            user_stack_top,
+            user_stack_top - 1024,
             elf.header.pt2.entry_point() as usize,
         )
     }
