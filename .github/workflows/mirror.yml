@@ -10,7 +10,7 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     env:
-      GITLAB_USER: neuqOS
+      GITLAB_USER: T202419145993048
 
     steps:
       - name: Checkout
