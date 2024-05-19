@@ -260,6 +260,18 @@ impl PageTableEntry {
     pub fn is_valid(&self) -> bool {
         self.flags().contains(PageTableEntryFlags::V)
     }
+
+    pub fn readable(&self) -> bool {
+        self.flags().contains(PageTableEntryFlags::R)
+    }
+
+    pub fn writable(&self) -> bool {
+        self.flags().contains(PageTableEntryFlags::W)
+    }
+
+    pub fn executable(&self) -> bool {
+        self.flags().contains(PageTableEntryFlags::X)
+    }
 }
 
 bitflags! {
