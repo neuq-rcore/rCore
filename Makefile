@@ -38,8 +38,17 @@ dummy-run:
 dummy-test: dummy-run parse
 
 clean:
+	@echo -e "\e[1;33m=> Cleaning os...\e[0m"
 	@cd os && make -s clean
+	@echo -e "\e[1;33m=> Cleaning user...\e[0m"
 	@cd user && make -s clean
+	rm -f os/src/link_app.S
+	@echo -e "\e[1;33m=> Cleaning all outputs/dependencies...\e[0m"
+	rm -f sbi-qemu kernel-qemu
+	@echo -e "\e[1;33m=> Cleaning test results\e[0m"
+	rm -f output.log results.json
+	@echo -e "\e[1;33m=> Cleaning test result parse\e[0m"
+	rm -rf test/check_result/__pycache__
 
 %:
 	@cd os && make -s $@
