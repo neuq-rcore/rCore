@@ -5,7 +5,8 @@
     slice_from_ptr_range,
     naked_functions,
     alloc_error_handler,
-    vec_into_raw_parts
+    vec_into_raw_parts,
+    custom_test_frameworks
 )]
 
 use core::{
@@ -40,24 +41,6 @@ pub mod syscall;
 pub mod task;
 mod timer;
 pub mod trap;
-
-// Since we've implemented filesystem, we will soon migrate to test suits from sdcard image
-// global_asm!(include_str!("link_app.S"));
-
-fn format_file_size(size: u64) -> String {
-    const KB: u64 = 1024;
-    const MB: u64 = 1024 * KB;
-    const GB: u64 = 1024 * MB;
-    if size < KB {
-        format!("{}B", size)
-    } else if size < MB {
-        format!("{}KB", size / KB)
-    } else if size < GB {
-        format!("{}MB", size / MB)
-    } else {
-        format!("{}GB", size / GB)
-    }
-}
 
 #[no_mangle]
 fn main() {
@@ -107,7 +90,7 @@ fn main() {
 
     loader::load_apps();
 
-    debug!("Running user app `write` from sdcard.img");
+    debug!("Running test programs from sdcard.img");
 
     task::run_first_task();
 }
@@ -136,6 +119,8 @@ unsafe extern "C" fn __kernel_start_main() -> ! {
     mm::init();
 
     trap::init();
+
+    // temporarily disable this because we have to run test programs synchronously
     // trap::enable_timer_interrupt();
     // timer::set_next_trigger();
 

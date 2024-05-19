@@ -1,4 +1,3 @@
-use crate::config::APP_BASE_ADDRESS;
 use crate::mm::address::VirtAddr;
 
 use crate::{
