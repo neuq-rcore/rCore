@@ -84,3 +84,6 @@ release-inner:
 	@echo '[+] Building os kernel(release)'
 	$(CARGO) build $(CARGO_FLAGS)
 	@$(OBJCOPY) --strip-all $(KERNEL_ELF) $(KERNEL_BIN)
+
+clean:
+	@$(CARGO) clean
