@@ -37,5 +37,9 @@ dummy-run:
 
 dummy-test: dummy-run parse
 
+clean:
+	@cd os && make -s clean
+	@cd user && make -s clean
+
 %:
 	@cd os && make -s $@
