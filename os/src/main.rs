@@ -14,7 +14,7 @@ use core::{
     slice,
 };
 
-use alloc::{string::String, vec::Vec};
+use alloc::vec::Vec;
 use fatfs::Read;
 use log::{debug, info};
 use sbi::shutdown;
