@@ -1,3 +1,4 @@
+mod pid;
 mod context;
 mod switch;
 
