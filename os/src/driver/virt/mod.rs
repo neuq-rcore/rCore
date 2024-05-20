@@ -9,7 +9,7 @@ use log::debug;
 
 use crate::mm::{
     frame::{frame_alloc_contiguous, frame_dealloc_contiguous},
-    PhysAddr, VirtAddr,
+    memory::{PhysAddr, VirtAddr},
 };
 pub const VIRTIO0: usize = 0x1000_1000;
 

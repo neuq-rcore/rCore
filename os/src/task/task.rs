@@ -2,7 +2,7 @@ use crate::mm::address::VirtAddr;
 
 use crate::{
     config::{kernel_stack_position, TRAP_CONTEXT},
-    mm::{
+    mm::memory::{
         kernel_token, MapPermission, MemorySpace, PhysAddr, PhysPageNum, UserSpace, VirtPageNum,
         KERNEL_SPACE,
     },
