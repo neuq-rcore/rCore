@@ -89,3 +89,18 @@ pub fn sys_times(tms: usize) -> isize {
         }
     }
 }
+
+fn sys_fork() -> isize {
+    unimplemented!();
+}
+
+fn sys_clone_interal(fn_ptr: usize, stack: usize, flags: usize) -> isize {
+    unimplemented!();
+}
+
+pub fn sys_clone(arg0: usize, arg1: usize, arg2: usize) -> isize {
+    match arg0 == 17 {
+        true => sys_fork(),
+        false => sys_clone_interal(arg0, arg1, arg2),
+    }
+}
