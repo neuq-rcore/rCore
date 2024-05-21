@@ -1,5 +1,3 @@
-use core::mem;
-
 use alloc::{slice, vec::Vec};
 
 use crate::config::PAGE_SIZE;

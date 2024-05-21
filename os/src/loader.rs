@@ -1,14 +1,7 @@
 use alloc::vec::Vec;
 
 use crate::config::*;
-use crate::trap::TrapContext;
 use core::arch::asm;
-
-#[repr(align(4096))]
-#[derive(Copy, Clone)]
-struct KernelStack {
-    data: [u8; KERNEL_STACK_SIZE],
-}
 
 #[repr(align(4096))]
 #[derive(Copy, Clone)]
@@ -16,28 +9,9 @@ struct UserStack {
     data: [u8; USER_STACK_SIZE],
 }
 
-static KERNEL_STACK: [KernelStack; MAX_APP_NUM] = [KernelStack {
-    data: [0; KERNEL_STACK_SIZE],
-}; MAX_APP_NUM];
-
 static USER_STACK: [UserStack; MAX_APP_NUM] = [UserStack {
     data: [0; USER_STACK_SIZE],
 }; MAX_APP_NUM];
-
-impl KernelStack {
-    fn get_sp(&self) -> usize {
-        self.data.as_ptr() as usize + KERNEL_STACK_SIZE
-    }
-
-    pub fn push_context(&self, trap_ctx: TrapContext) -> usize {
-        let trap_ctx_ptr =
-            (self.get_sp() - core::mem::size_of::<TrapContext>()) as *mut TrapContext;
-        unsafe {
-            *trap_ctx_ptr = trap_ctx;
-        }
-        trap_ctx_ptr as usize
-    }
-}
 
 impl UserStack {
     fn get_sp(&self) -> usize {
