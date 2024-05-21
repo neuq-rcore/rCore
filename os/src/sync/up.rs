@@ -7,9 +7,11 @@ pub struct UPSafeCell<T> {
 unsafe impl<T> Sync for UPSafeCell<T> {}
 
 impl<T> UPSafeCell<T> {
-    pub unsafe fn new(value: T) -> Self {
-        Self {
-            inner: RefCell::new(value),
+    pub fn new(value: T) -> Self {
+        unsafe {
+            Self {
+                inner: RefCell::new(value),
+            }
         }
     }
 

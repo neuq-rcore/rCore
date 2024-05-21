@@ -212,7 +212,7 @@ pub mod tests {
 
 lazy_static! {
     static ref PID_ALLOCATOR: UPSafeCell<PidManager> =
-        unsafe { UPSafeCell::new(PidManager::new()) };
+        UPSafeCell::new(PidManager::new());
 }
 
 pub fn pid_alloc() -> PidHandle {
