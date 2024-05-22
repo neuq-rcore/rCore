@@ -115,10 +115,22 @@ impl MemorySpace {
         self.page_table.map(
             VirtAddr::from(TRAMPOLINE).into(),
             PhysAddr::from(strampoline as usize).into(),
-            PageTableEntryFlags::R | PageTableEntryFlags::X ,
+            PageTableEntryFlags::R | PageTableEntryFlags::X,
         );
     }
 
+    ///Remove `MapArea` that starts with `start_vpn`
+    pub fn remove_area_with_start_vpn(&mut self, start_vpn: VirtPageNum) {
+        if let Some((idx, area)) = self
+            .areas
+            .iter_mut()
+            .enumerate()
+            .find(|(_, area)| area.range.start == start_vpn)
+        {
+            area.unmap_many(&mut self.page_table);
+            self.areas.remove(idx);
+        }
+    }
 }
 
 impl MapArea {
@@ -396,7 +408,10 @@ impl UserSpace {
         user_stack_bottom += PAGE_SIZE;
 
         let user_stack_top = user_stack_bottom + USER_STACK_SIZE;
-        debug!("Mapping user stack 0x{:08X}..0x{:08X}", user_stack_bottom, user_stack_top);
+        debug!(
+            "Mapping user stack 0x{:08X}..0x{:08X}",
+            user_stack_bottom, user_stack_top
+        );
         user_space.push(
             MapArea::new(
                 user_stack_bottom.into(),

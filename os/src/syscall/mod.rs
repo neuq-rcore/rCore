@@ -7,6 +7,9 @@ const SYSCALL_UNAME: usize = 160;
 const SYSCALL_GETPID: usize = 172;
 const SYSCALL_GETPPID: usize = 173;
 const SYSCALL_TIMES: usize = 153;
+const SYSCALL_CLONE: usize = 220;
+const SYSCALL_EXEC: usize = 221;
+const SYSCALL_GETCWD: usize = 17;
 
 mod fs;
 mod process;
@@ -30,8 +33,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_GET_TIME => sys_get_time(args[0] as *mut TimeVal, args[1] as i32),
         SYSCALL_NANOSLEEP => sys_nanosleep(args[0] as *mut TimeVal, args[1] as *mut TimeVal),
         SYSCALL_UNAME => sys_uname(args[0] as *mut Utsname),
-        SYSCALL_GETPID => 1,
-        SYSCALL_GETPPID => 2,
+        SYSCALL_GETPID => sys_getpid(),
+        SYSCALL_GETPPID => sys_getppid(),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     };
 

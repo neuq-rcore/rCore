@@ -1,19 +1,23 @@
-mod pid;
 mod context;
+mod pid;
 mod switch;
 
 #[allow(clippy::module_inception)]
 mod task;
 
+pub use pid::tests as pid_tests;
+
 use crate::loader::get_app_elf_data;
-use crate::{loader::get_num_app, trap::TrapContext};
 use crate::sbi::shutdown;
 use crate::sync::UPSafeCell;
+use crate::task::pid::pid_alloc;
+use crate::{loader::get_num_app, trap::TrapContext};
 use alloc::vec::Vec;
 use lazy_static::*;
 use log::debug;
 use switch::__switch;
-use task::{TaskControlBlock, TaskStatus};
+use task::TaskControlBlock;
+use task::TaskStatus;
 
 pub use context::TaskContext;
 
@@ -35,17 +39,15 @@ lazy_static! {
         for i in 0..num_app {
             tasks.push(TaskControlBlock::new(
                 get_app_elf_data(i).unwrap(),
-                i,
+                pid_alloc(),
             ));
         }
         TaskManager {
             num_app,
-            inner: unsafe {
-                UPSafeCell::new(TaskManagerInner {
-                    tasks,
-                    current_task: 0,
-                })
-            },
+            inner: UPSafeCell::new(TaskManagerInner {
+                tasks,
+                current_task: 0,
+            }),
         }
     };
 }
@@ -54,8 +56,8 @@ impl TaskManager {
     fn run_first_task(&self) -> ! {
         let mut inner = self.inner.exclusive_access();
         let task0 = &mut inner.tasks[0];
-        task0.task_status = TaskStatus::Running;
-        let next_task_ctx_ptr = &task0.task_ctx as *const TaskContext;
+        task0.update_status(TaskStatus::Running);
+        let next_task_ctx_ptr = task0.task_ctx() as *const TaskContext;
         drop(inner);
         let mut _unused = TaskContext::zero_init();
         unsafe {
@@ -67,13 +69,13 @@ impl TaskManager {
     fn mark_current_suspended(&self) {
         let mut inner = self.inner.exclusive_access();
         let current = inner.current_task;
-        inner.tasks[current].task_status = TaskStatus::Ready;
+        inner.tasks[current].update_status(TaskStatus::Ready);
     }
 
     fn mark_current_exited(&self) {
         let mut inner = self.inner.exclusive_access();
         let current = inner.current_task;
-        inner.tasks[current].task_status = TaskStatus::Exited;
+        inner.tasks[current].update_status(TaskStatus::Exited);
     }
 
     fn find_next_task(&self) -> Option<usize> {
@@ -81,17 +83,17 @@ impl TaskManager {
         let current = inner.current_task;
         (current + 1..current + self.num_app + 1)
             .map(|id| id % self.num_app)
-            .find(|id| inner.tasks[*id].task_status == TaskStatus::Ready)
+            .find(|id| inner.tasks[*id].status() == TaskStatus::Ready)
     }
 
     fn run_next_task(&self) {
         if let Some(next) = self.find_next_task() {
             let mut inner = self.inner.exclusive_access();
             let current = inner.current_task;
-            inner.tasks[next].task_status = TaskStatus::Running;
+            inner.tasks[next].update_status(TaskStatus::Running);
             inner.current_task = next;
-            let current_task_ctx_ptr = &mut inner.tasks[current].task_ctx as *mut TaskContext;
-            let next_task_ctx_ptr = &inner.tasks[next].task_ctx as *const TaskContext;
+            let current_task_ctx_ptr = inner.tasks[current].task_ctx_mut() as *mut TaskContext;
+            let next_task_ctx_ptr = inner.tasks[next].task_ctx() as *const TaskContext;
             drop(inner);
             unsafe {
                 __switch(current_task_ctx_ptr, next_task_ctx_ptr);
@@ -103,15 +105,23 @@ impl TaskManager {
     }
 
     fn get_current_token(&self) -> usize {
-        let inner = self.inner.exclusive_access();
+        let inner = self.inner.shared_access();
         let current = inner.current_task;
-        inner.tasks[current].memory_space.token()
+        inner.tasks[current].token()
     }
 
     fn get_current_trap_cx(&self) -> &mut TrapContext {
-        let inner = self.inner.exclusive_access();
+        let mut inner = self.inner.exclusive_access();
         let current = inner.current_task;
-        inner.tasks[current].trap_ctx()
+        inner.tasks[current].trap_ctx_mut()
+    }
+}
+
+pub fn current_task() -> &'static TaskControlBlock {
+    let taskmgr = TASK_MANAGER.inner.exclusive_access();
+    let task_id = taskmgr.current_task;
+    unsafe {
+        & *(&taskmgr.tasks[task_id] as *const TaskControlBlock)
     }
 }
 

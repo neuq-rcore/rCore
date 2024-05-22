@@ -8,10 +8,8 @@ unsafe impl<T> Sync for UPSafeCell<T> {}
 
 impl<T> UPSafeCell<T> {
     pub fn new(value: T) -> Self {
-        unsafe {
-            Self {
-                inner: RefCell::new(value),
-            }
+        Self {
+            inner: RefCell::new(value),
         }
     }
 
