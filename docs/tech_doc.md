@@ -6,7 +6,7 @@
 
 ## 编译环境与工具链说明
 
-编程语言： [`rust`](implements/语言选择.md)
+编程语言： [`rust`](language.md)
 
 ## 完成情况
 
