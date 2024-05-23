@@ -8,22 +8,65 @@
 
 ---
 
-## 编译环境与工具链说明
+## 仓库Actions
 
-编程语言： [`rust`](language.md)
+[![Continuous Integration](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml)
 
-## 完成情况
+[![Sync to GitLab](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml)
 
-| 内核模块| 完成情况 | 系统调用 |
-| :------- | ---- | ---- |
-|          |      |      |
-|          |      |      |
-|          |      |      |
-|          |      |      |
+[![OJ Simulation](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml)
+
+## Environment and Language
+
+ LLanguage： [`rust`](language.md)
+
+ Build Dependencies
+
+- `riscv64-elf-gcc`
+
+- `riscv64-elf-binutils`
+
+- `cargo-binutils`
+
+- `llvm-tools-preview`
+
+  For command line instructions, refer to `.github/workflows/ci.yml`
+
+## Rreparation
+
+### Build
+
+```shell
+# or simply run `make`
+make build
+```
+
+### Run
+
+```shell
+make run
+```
+
+### Test
+
+#### 本地测试
+在仓库根目录执行
+```bash
+make test
+```
 
 运行 `make test` 结果
 
 ![visual_report.png](assets/visual_report.png)
+
+## 完成情况
+
+| 内核模块 | 完成情况 | 系统调用 |
+| :------- | -------- | -------- |
+|          |          |          |
+|          |          |          |
+|          |          |          |
+|          |          |          |
 
 ## 参赛队员
 

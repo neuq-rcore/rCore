@@ -16,7 +16,7 @@
 │  ├── Cargo.toml
 │  ├── Makefile
 │  └── src
-│     ├── boards
+│     ├── boards 板卡相关信息
 │     │  ├── mod.rs
 │     │  └── qemu.rs
 │     ├── config.rs
@@ -24,7 +24,7 @@
 │     │  ├── mod.rs
 │     │  └── virt
 │     │     └── mod.rs
-│     ├── fat32
+│     ├── fat32  FAT32文件实现
 │     │  ├── mod.rs
 │     │  └── virt.rs
 │     ├── lang_items.rs
@@ -32,7 +32,7 @@
 │     ├── loader.rs
 │     ├── logging.rs
 │     ├── main.rs
-│     ├── mm
+│     ├── mm mmu实现
 │     │  ├── address.rs
 │     │  ├── frame.rs
 │     │  ├── heap.rs
@@ -48,19 +48,19 @@
 │     ├── sync
 │     │  ├── mod.rs
 │     │  └── up.rs
-│     ├── syscall
+│     ├── syscall 系统调用实现
 │     │  ├── fs.rs
 │     │  ├── mod.rs
 │     │  ├── process.rs
 │     │  └── system.rs
-│     ├── task
+│     ├── task 
 │     │  ├── context.rs
 │     │  ├── mod.rs
 │     │  ├── switch.rs
 │     │  ├── switch.S
 │     │  └── task.rs
-│     ├── timer.rs
-│     └── trap
+│     ├── timer.rs 定时实现
+│     └── trap  trap实现
 │        ├── context.rs
 │        ├── mod.rs
 │        └── trap.S
