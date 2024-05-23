@@ -58,6 +58,13 @@ fn main() {
         "getppid",
         "uname",
         "times",
+        "fork",
+        "clone",
+        "wait",
+        "waitpid",
+        "exit",
+        // "exec", // TODO
+        // "yield", // FIXME
     ];
 
     for entry in entries {

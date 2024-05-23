@@ -1,5 +1,5 @@
 #[allow(non_snake_case)]
-mod TaskManager;
+pub mod TaskManager;
 mod context;
 mod pid;
 pub mod processor;
@@ -12,18 +12,6 @@ use alloc::sync::Arc;
 pub use pid::tests as pid_tests;
 
 pub use processor::run_tasks;
-
-// use crate::loader::get_app_elf_data;
-// use crate::sbi::shutdown;
-// use crate::sync::UPSafeCell;
-// use crate::task::pid::pid_alloc;
-// use crate::{loader::get_num_app, trap::TrapContext};
-// use alloc::vec::Vec;
-// use lazy_static::*;
-// use log::debug;
-// use switch::__switch;
-// use task::TaskControlBlock;
-// use task::TaskStatus;
 
 pub use context::TaskContext;
 

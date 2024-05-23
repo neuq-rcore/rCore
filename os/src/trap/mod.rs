@@ -48,12 +48,23 @@ pub fn trap_handler() -> ! {
         let _kernel_ctx = KernelTrapContext::enter();
         let scause = scause::read();
         let stval = stval::read();
-        let ctx = current_trap_ctx();
+        let mut ctx = current_trap_ctx();
     
         match scause.cause() {
             Trap::Exception(Exception::UserEnvCall) => {
+                // // jump to next instruction anyway
+                // let mut cx = current_trap_cx();
+                // cx.sepc += 4;
+                // // get system call return value
+                // let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]);
+                // // cx is changed during sys_exec, so we have to call it again
+                // cx = current_trap_cx();
+                // cx.x[10] = result as usize;
+
                 ctx.sepc += 4;
-                ctx.x[10] = syscall(ctx.x[17], [ctx.x[10], ctx.x[11], ctx.x[12]]) as usize;
+                let result = syscall(ctx.x[17], [ctx.x[10], ctx.x[11], ctx.x[12]]) as usize;
+                ctx = current_trap_ctx();
+                ctx.x[10] = result;
             }
             Trap::Exception(Exception::StoreFault)
             | Trap::Exception(Exception::StorePageFault)
@@ -63,7 +74,7 @@ pub fn trap_handler() -> ! {
                 exit_current_and_run_next(-2);
             }
             Trap::Exception(Exception::IllegalInstruction) => {
-                println!("[kernel] IllegalInstruction in application, kernel killed it.");
+                println!("[kernel] IllegalInstruction in application, kernel killed it. PC: {:#x}", ctx.sepc);
                 exit_current_and_run_next(-3);
             }
             Trap::Interrupt(Interrupt::SupervisorTimer) => {

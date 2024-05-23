@@ -146,23 +146,23 @@ impl MemorySpace {
         self.areas.clear();
     }
 
-    pub fn from_existed_space(them: &MemorySpace) -> Self {
-        let mut memory_space = Self::new_empty();
-        memory_space.map_trampoline();
+    pub fn from_existed_space(them_space: &MemorySpace) -> Self {
+        let mut this_space = Self::new_empty();
+        this_space.map_trampoline();
 
         // copy data sections/trap_context/user_stack
-        for area in them.areas.iter() {
+        for area in them_space.areas.iter() {
             let new_area = MapArea::from_another(area);
-            memory_space.push(new_area, None);
+            this_space.push(new_area, None);
             // copy data from another space
             for vpn in area.vpn_range() {
-                let src_ppn = memory_space.page_table.translate(VirtPageNum::from(vpn)).unwrap().ppn();
-                let dst_ppn = memory_space.page_table.translate(VirtPageNum::from(vpn)).unwrap().ppn();
+                let src_ppn = them_space.page_table.translate(VirtPageNum::from(vpn)).unwrap().ppn();
+                let dst_ppn = this_space.page_table.translate(VirtPageNum::from(vpn)).unwrap().ppn();
                 dst_ppn.as_page_bytes_slice().copy_from_slice(src_ppn.as_page_bytes_slice());
             }
         }
 
-        memory_space
+        this_space
     }
 }
 

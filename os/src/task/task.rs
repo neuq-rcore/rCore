@@ -8,6 +8,7 @@ use alloc::vec::Vec;
 use crate::mm::address::VirtAddr;
 
 use crate::sync::UPSafeCell;
+use crate::task::pid::pid_alloc;
 use crate::{
     config::TRAP_CONTEXT,
     mm::{
@@ -34,7 +35,7 @@ pub struct TaskControlBlockInner {
     pub trap_ctx_ppn: PhysPageNum,
     pub base_size: usize,
     pub parent: Option<Weak<TaskControlBlock>>,
-    pub children: Vec<Arc<TaskControlBlockInner>>,
+    pub children: Vec<Arc<TaskControlBlock>>,
     pub exit_code: i32,
 }
 
@@ -151,12 +152,68 @@ impl TaskControlBlock {
         self.pid.0
     }
 
-    pub fn exec(&mut self, elf_bytes: &[u8]) -> ! {
-        unimplemented!()
+    pub fn exec(&mut self, elf_bytes: &[u8]) {
+        let (new_space, user_sp, entry_point) = UserSpace::from_elf(elf_bytes);
+        let trap_cx_ppn = new_space
+            .table()
+            .translate(VirtAddr::from(TRAP_CONTEXT).into())
+            .unwrap()
+            .ppn();
+        
+        let mut inner = self.exclusive_inner();
+        inner.memory_space = new_space;
+        inner.trap_ctx_ppn = trap_cx_ppn;
+        let trap_ctx = inner.trap_ctx();
+        *trap_ctx = TrapContext::app_init_context(
+            entry_point,
+            user_sp,
+            kernel_token(),
+            self.kernel_stack.top(),
+            trap_handler as usize,
+        );
     }
 
-    pub fn fork(&mut self) -> TaskControlBlock {
-        unimplemented!();
+    pub fn fork(self: &Arc<TaskControlBlock>) -> Arc<TaskControlBlock> {
+        let mut parent_inner = self.exclusive_inner();
+        let child_space = MemorySpace::from_existed_space(&parent_inner.memory_space);
+
+        let trap_ctx_ppn = child_space
+            .table()
+            .translate(VirtAddr::from(TRAP_CONTEXT).into())
+            .unwrap()
+            .ppn();
+
+        let pid_handle = pid_alloc();
+        assert!(pid_handle.0 != self.pid());
+
+        let kernel_stack = KernelStack::new(&pid_handle);
+        let kernel_stack_top = kernel_stack.top();
+
+        let child_task_ctx = TaskContext::goto_trap_return(kernel_stack_top);
+
+        let child_inner = UPSafeCell::new(TaskControlBlockInner {
+            task_status: TaskStatus::Ready,
+            task_ctx: child_task_ctx,
+            memory_space: child_space,
+            trap_ctx_ppn,
+            base_size: parent_inner.base_size,
+            parent: Some(Arc::downgrade(self)),
+            children: Vec::new(),
+            exit_code: 0,
+        });
+
+        let child_control_block = Arc::new(TaskControlBlock {
+            inner: child_inner,
+            pid: pid_handle,
+            kernel_stack,
+        });
+
+        parent_inner.children.push(child_control_block.clone());
+
+        let child_trap_ctx = child_control_block.exclusive_inner().trap_ctx();
+        child_trap_ctx.kernel_sp = kernel_stack_top;
+
+        child_control_block
     }
 }
 
