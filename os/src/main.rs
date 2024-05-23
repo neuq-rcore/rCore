@@ -8,10 +8,7 @@
     vec_into_raw_parts
 )]
 
-use core::{
-    arch::asm,
-    slice,
-};
+use core::{arch::asm, slice};
 
 use alloc::vec::Vec;
 use fatfs::Read;
@@ -53,7 +50,15 @@ fn main() {
 
     debug!("Filesystem initialized.");
 
-    let test_cases = vec!["write", "gettimeofday", "sleep", "getpid", "getppid", "uname", "times"];
+    let test_cases = vec![
+        "write",
+        "gettimeofday",
+        "sleep",
+        "getpid",
+        "getppid",
+        "uname",
+        "times",
+    ];
 
     for entry in entries {
         if entry.is_err() {
@@ -73,7 +78,7 @@ fn main() {
             }
 
             let file_len = entry.len() as usize;
-            
+
             let mut buf: Vec<u8> = Vec::with_capacity(file_len);
             unsafe {
                 buf.set_len(file_len);

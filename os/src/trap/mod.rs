@@ -1,6 +1,7 @@
 mod context;
 
-use crate::config::TRAP_CONTEXT;
+use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
+use crate::mm::VirtAddr;
 use crate::syscall::syscall;
 use crate::task::{
     exit_current_and_run_next, suspend_current_and_run_next,
@@ -22,8 +23,9 @@ pub fn init() {
 
 fn set_user_trap() {
     debug!("Entering user trap mode");
+    let user_trap_va = TRAMPOLINE + (__snap_trap as usize - __snap_trap as usize);
     unsafe {
-        stvec::write(__snap_trap as usize, TrapMode::Direct);
+        stvec::write(user_trap_va as usize, TrapMode::Direct);
     }
 }
 
@@ -103,7 +105,7 @@ pub fn trap_return() -> ! {
     let trap_ctx = TRAP_CONTEXT;
     let user_satp = current_user_token();
 
-    let restore_va: usize = __restore_snap as usize;
+    let restore_va: usize = TRAMPOLINE + (__restore_snap as usize - __snap_trap as usize);
 
     debug!("restore_va: {:#x}", restore_va);
     debug!("user_satp: {:#x}", user_satp);
@@ -239,7 +241,7 @@ pub unsafe extern "C" fn __snap_trap() -> ! {
 #[naked]
 #[no_mangle]
 #[link_section = ".text.trampoline"]
-pub unsafe extern "C" fn __restore_snap(/*context_snap: *const TrapContext, user_token: usize*/) -> !
+pub unsafe extern "C" fn __restore_snap(/*snaped_context: *const TrapContext, user_token: usize*/) -> !
 {
     // see `__snap_trap` for the stack layout
     asm!(

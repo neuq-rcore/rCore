@@ -56,9 +56,19 @@ impl MapArea {
         let end = self.range.end.0;
         start..end
     }
+
+    pub fn from_another(them: &MapArea) -> Self {
+        Self {
+            range: them.range.clone(),
+            data_frames: BTreeMap::new(),
+            map_type: them.map_type,
+            permission: them.permission,
+        }
+    }
 }
 
 bitflags! {
+    #[derive(Clone, Copy)]
     pub struct MapPermission: u8 {
         const R = 1 << 1;
         const W = 1 << 2;
@@ -134,6 +144,25 @@ impl MemorySpace {
 
     pub fn clear(&mut self) {
         self.areas.clear();
+    }
+
+    pub fn from_existed_space(them: &MemorySpace) -> Self {
+        let mut memory_space = Self::new_empty();
+        memory_space.map_trampoline();
+
+        // copy data sections/trap_context/user_stack
+        for area in them.areas.iter() {
+            let new_area = MapArea::from_another(area);
+            memory_space.push(new_area, None);
+            // copy data from another space
+            for vpn in area.vpn_range() {
+                let src_ppn = memory_space.page_table.translate(VirtPageNum::from(vpn)).unwrap().ppn();
+                let dst_ppn = memory_space.page_table.translate(VirtPageNum::from(vpn)).unwrap().ppn();
+                dst_ppn.as_page_bytes_slice().copy_from_slice(src_ppn.as_page_bytes_slice());
+            }
+        }
+
+        memory_space
     }
 }
 
@@ -346,7 +375,7 @@ impl KernelSpace {
 lazy_static! {
     /// a memory set instance through lazy_static! managing kernel space
     pub static ref KERNEL_SPACE: Arc<UPSafeCell<MemorySpace>> =
-        Arc::new(unsafe { UPSafeCell::new(KernelSpace::new()) });
+        Arc::new(UPSafeCell::new(KernelSpace::new()));
 }
 
 pub fn kernel_token() -> usize {
@@ -448,17 +477,6 @@ impl UserSpace {
                 MapPermission::R | MapPermission::W,
             ),
             None,
-        );
-
-        extern "C" {
-            fn strampoline();
-        }
-
-        // To allow instructions in `__restore_snap` to be executed
-        user_space.page_table.map(
-            VirtAddr::from(strampoline as usize).into(),
-            PhysAddr::from(strampoline as usize).into(),
-            PageTableEntryFlags::R | PageTableEntryFlags::X,
         );
 
         (
