@@ -1,14 +1,14 @@
 # neuqOS 技术文档
 
-![校徽](assets/school.jpg)
+![NEUQ](assets/neuq.jpg)
+
+## 所有文档
+
+[文档总目录](content.md)
 
 ---
 
-### [文档总目录](content.md)
-
----
-
-## 仓库Actions
+## Github Actions
 
 [![Continuous Integration](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml)
 
@@ -16,23 +16,11 @@
 
 [![OJ Simulation](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml)
 
-## Environment and Language
+## 开发环境
 
- LLanguage： [`rust`](language.md)
+编程语言： [`rust`](language.md)
 
- Build Dependencies
-
-- `riscv64-elf-gcc`
-
-- `riscv64-elf-binutils`
-
-- `cargo-binutils`
-
-- `llvm-tools-preview`
-
-  For command line instructions, refer to `.github/workflows/ci.yml`
-
-## Rreparation
+## Preparation
 
 ### Build
 
@@ -50,7 +38,9 @@ make run
 ### Test
 
 #### 本地测试
+
 在仓库根目录执行
+
 ```bash
 make test
 ```
