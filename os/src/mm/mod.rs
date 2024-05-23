@@ -131,6 +131,10 @@ impl MemorySpace {
             self.areas.remove(idx);
         }
     }
+
+    pub fn clear(&mut self) {
+        self.areas.clear();
+    }
 }
 
 impl MapArea {

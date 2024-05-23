@@ -4,8 +4,6 @@ use core::cell::RefMut;
 use alloc::sync::Weak;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
-use log::debug;
-use log::info;
 
 use crate::mm::address::VirtAddr;
 
@@ -60,7 +58,7 @@ impl TaskControlBlockInner {
 }
 
 impl TaskControlBlock {
-    pub fn exclusive_inner(&mut self) -> RefMut<TaskControlBlockInner> {
+    pub fn exclusive_inner(&self) -> RefMut<TaskControlBlockInner> {
         self.inner.exclusive_access()
     }
 
@@ -88,7 +86,7 @@ impl TaskControlBlock {
         self.status() == TaskStatus::Zombie
     }
 
-    pub fn update_status(&mut self, new_status: TaskStatus) {
+    pub fn update_status(&self, new_status: TaskStatus) {
         self.exclusive_inner().task_status = new_status
     }
 

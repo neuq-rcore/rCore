@@ -13,7 +13,7 @@ use core::{
     slice,
 };
 
-use alloc::{string::String, vec::Vec};
+use alloc::vec::Vec;
 use fatfs::Read;
 use log::{debug, info};
 use sbi::shutdown;
@@ -30,7 +30,6 @@ mod config;
 mod driver;
 mod fat32;
 mod lang_items;
-mod loader;
 mod logging;
 mod mm;
 mod sbi;
@@ -68,7 +67,7 @@ fn main() {
 
         let file_name = entry.file_name();
 
-        for name in test_cases.iter() {
+        for (_i, name) in test_cases.iter().enumerate() {
             if file_name != *name {
                 continue;
             }
@@ -85,16 +84,14 @@ fn main() {
 
             file.read_exact(slice).unwrap();
 
-            let id = loader::load_app(buf);
-            loader::add_pending_task(id).unwrap();
+            task::kernel_create_process(&buf);
+
+            info!("Running user apps '{}' from sdcard.img", name);
+            task::run_tasks();
         }
     }
 
-    loader::load_apps();
-
-    debug!("Running user app `write` from sdcard.img");
-
-    task::run_first_task();
+    debug!("All tests finished. Shutting down.")
 }
 
 #[naked]
@@ -121,8 +118,8 @@ unsafe extern "C" fn __kernel_start_main() -> ! {
     mm::init();
 
     trap::init();
-    // trap::enable_timer_interrupt();
-    // timer::set_next_trigger();
+    trap::enable_timer_interrupt();
+    timer::set_next_trigger();
 
     debug_env();
 

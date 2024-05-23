@@ -15,6 +15,8 @@ mod fs;
 mod process;
 mod system;
 
+use core::ffi::c_char;
+
 use log::debug;
 use fs::*;
 use process::*;
@@ -35,6 +37,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_UNAME => sys_uname(args[0] as *mut Utsname),
         SYSCALL_GETPID => sys_getpid(),
         SYSCALL_GETPPID => sys_getppid(),
+        SYSCALL_EXEC => sys_exec(args[0] as *const u8, args[1] as *const *const c_char, args[2] as *const *const c_char),
+        SYSCALL_CLONE => sys_clone(args[0], args[1], args[2]),
         _ => panic!("Unsupported syscall_id: {}", syscall_id),
     };
 

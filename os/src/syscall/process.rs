@@ -1,15 +1,18 @@
 use core::arch::asm;
-
+use core::ffi::c_char;
 use log::*;
 use crate::boards::qemu::CLOCK_FREQ;
 use crate::mm::page::PageTable;
 
-use crate::task::{current_user_token, exit_current_and_run_next, suspend_current_and_run_next};
+use crate::task::processor::{current_task, current_user_token};
+use crate::task::{exit_current_and_run_next, suspend_current_and_run_next, IDLE_PID};
 use crate::timer::{TimeVal, get_timeval};
+
+const SIGCHLD: usize = 17;
 
 pub fn sys_exit(exit_code: i32) -> ! {
     info!("Application exited with code {}", exit_code);
-    exit_current_and_run_next();
+    exit_current_and_run_next(exit_code);
     panic!("Unreachable in sys_exit!");
 }
 
@@ -94,13 +97,42 @@ fn sys_fork() -> isize {
     unimplemented!();
 }
 
-fn sys_clone_interal(fn_ptr: usize, stack: usize, flags: usize) -> isize {
+pub fn sys_clone(fn_ptr: usize, stack: usize, flags: usize) -> isize {
+    if fn_ptr == SIGCHLD {
+        return sys_fork();
+    }
+
     unimplemented!();
 }
 
-pub fn sys_clone(arg0: usize, arg1: usize, arg2: usize) -> isize {
-    match arg0 == 17 {
-        true => sys_fork(),
-        false => sys_clone_interal(arg0, arg1, arg2),
+pub fn sys_exec(pathname: *const u8, argv: *const *const c_char, envp: *const *const c_char) -> ! {
+    //
+    unreachable!();
+}
+
+pub fn sys_getppid() -> isize {
+    let current_task = current_task();
+
+    match current_task {
+        // Should never happen, but we left it here for safety
+        None => IDLE_PID as isize,
+        Some(current_task) => {
+            match current_task.exclusive_inner().parent {
+                // we don't have a init process and did not implemented parent/child relationship
+                None => 1,
+                Some(ref p) => {
+                    match p.upgrade() {
+                        None => 1,
+                        Some(p) => {
+                            p.pid() as isize
+                        }
+                    }
+                }
+            }
+        }
     }
+}
+
+pub fn sys_getpid() -> isize {
+    current_task().unwrap().pid() as isize
 }

@@ -3,11 +3,12 @@ mod context;
 use crate::config::TRAP_CONTEXT;
 use crate::syscall::syscall;
 use crate::task::{
-    current_trap_cx, current_user_token, exit_current_and_run_next, suspend_current_and_run_next,
+    exit_current_and_run_next, suspend_current_and_run_next,
 };
+use crate::task::processor::{current_trap_ctx, current_user_token};
 use crate::timer::set_next_trigger;
 pub use context::TrapContext;
-use core::arch::{asm};
+use core::arch::asm;
 use log::debug;
 use riscv::register::{
     mtvec::TrapMode,
@@ -45,7 +46,7 @@ pub fn trap_handler() -> ! {
         let _kernel_ctx = KernelTrapContext::enter();
         let scause = scause::read();
         let stval = stval::read();
-        let ctx = current_trap_cx();
+        let ctx = current_trap_ctx();
     
         match scause.cause() {
             Trap::Exception(Exception::UserEnvCall) => {
@@ -57,11 +58,11 @@ pub fn trap_handler() -> ! {
             | Trap::Exception(Exception::LoadFault)
             | Trap::Exception(Exception::LoadPageFault) => {
                 println!("[kernel] PageFault in application, bad addr = {:#x}, bad instruction = {:#x}, kernel killed it.", stval, ctx.sepc);
-                exit_current_and_run_next();
+                exit_current_and_run_next(-2);
             }
             Trap::Exception(Exception::IllegalInstruction) => {
                 println!("[kernel] IllegalInstruction in application, kernel killed it.");
-                exit_current_and_run_next();
+                exit_current_and_run_next(-3);
             }
             Trap::Interrupt(Interrupt::SupervisorTimer) => {
                 set_next_trigger();
