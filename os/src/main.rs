@@ -63,6 +63,10 @@ fn main() {
         "wait",
         "waitpid",
         "exit",
+        "mount",
+        "umount",
+        "getcwd",
+        "chdir",
         // "exec", // TODO
         // "yield", // FIXME
     ];

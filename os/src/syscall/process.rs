@@ -1,5 +1,7 @@
 use crate::boards::qemu::CLOCK_FREQ;
 use crate::mm::page::PageTable;
+use crate::mm::VirtAddr;
+use alloc::string::{String, ToString};
 use alloc::sync::Arc;
 use core::arch::asm;
 use core::ffi::c_char;
@@ -230,4 +232,47 @@ pub fn sys_waitpid(pid: isize, code: *mut isize, _options: usize) -> isize {
             return ret;
         }
     }
+}
+
+pub fn sys_getcwd(buf: *mut c_char, size: usize) -> isize {
+    let task = current_task().unwrap();
+    let token = task.token();
+    let inner = task.shared_inner();
+    let cwd = inner.cwd.as_bytes();
+
+    if size < cwd.len() + 1 {
+        return -1;
+    }
+
+    PageTable::copy_to_space(token, cwd.as_ptr(), buf as *mut u8, cwd.len());
+    buf as isize
+}
+
+pub fn sys_chdir(path: *mut c_char) -> isize {
+    let task = current_task().unwrap();
+    let token = task.token();
+
+    let path = translated_str(token, path as *const u8);
+    info!("Changed directory to: {}", path);
+
+    let mut inner = task.exclusive_inner();
+    inner.cwd = path.to_string();
+    0
+}
+
+fn translated_str(token: usize, ptr: *const u8) -> String {
+    let page_table = PageTable::from_token(token);
+    let mut string = String::new();
+    let mut va = ptr as usize;
+    loop {
+        let ch: u8 =
+            unsafe { *(page_table.translate_va(VirtAddr::from(va)).unwrap().0 as *const u8) };
+        if ch == 0 {
+            break;
+        } else {
+            string.push(ch as char);
+            va += 1;
+        }
+    }
+    string
 }

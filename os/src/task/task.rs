@@ -1,6 +1,7 @@
 use core::cell::Ref;
 use core::cell::RefMut;
 
+use alloc::string::String;
 use alloc::sync::Weak;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
@@ -37,6 +38,7 @@ pub struct TaskControlBlockInner {
     pub parent: Option<Weak<TaskControlBlock>>,
     pub children: Vec<Arc<TaskControlBlock>>,
     pub exit_code: i32,
+    pub cwd: String,
 }
 
 impl TaskControlBlockInner {
@@ -126,6 +128,7 @@ impl TaskControlBlock {
             parent: None,
             children: Vec::new(),
             exit_code: 0,
+            cwd: String::from("/"),
         };
 
         let kernel_token = kernel_token();
@@ -200,6 +203,7 @@ impl TaskControlBlock {
             parent: Some(Arc::downgrade(self)),
             children: Vec::new(),
             exit_code: 0,
+            cwd: String::from("/"),
         });
 
         let child_control_block = Arc::new(TaskControlBlock {
