@@ -41,14 +41,14 @@ QEMU_ARGS := -machine virt \
 
 all: build
 
-build: build-app
+build:
 	@echo '[+] Building os kernel'
 	$(CARGO) build $(CARGO_FLAGS)
 	@$(OBJCOPY) --strip-all $(KERNEL_ELF) $(KERNEL_BIN)
 
-build-app:
-	@echo '[+] Building user applications'
-	@cd ../user && make build
+# build-app:
+# 	@echo '[+] Building user applications'
+# 	@cd ../user && make build
 
 run: build
 	@$(QEMU) $(QEMU_ARGS)
