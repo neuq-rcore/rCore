@@ -1,6 +1,8 @@
 # neuqOS
 
-A simple os kernel for riscv64
+A simple os kernel for riscv64 written in Rust
+
+[![CodeFactor](https://www.codefactor.io/repository/github/neuq-rcore/rcore/badge)](https://www.codefactor.io/repository/github/neuq-rcore/rcore)
 
 [![Continuous Integration](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml)
 
