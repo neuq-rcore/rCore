@@ -3,6 +3,7 @@ use crate::mm::page::PageTable;
 use crate::task::TaskManager::add_to_waiting;
 use crate::trap::{disable_timer_interrupt, enable_timer_interrupt};
 use alloc::sync::Arc;
+use riscv::interrupt::disable;
 use core::arch::asm;
 use core::ffi::c_char;
 use log::*;
@@ -181,8 +182,10 @@ pub fn sys_getpid() -> isize {
 fn sys_waitpid_inner(pid: isize, code: *mut isize) -> isize {
     let task = current_task().unwrap();
     let token = task.token();
-
+    
     loop {
+        disable_timer_interrupt();
+
         let mut inner = task.exclusive_inner();
         // find a child process
         if !inner
@@ -220,6 +223,8 @@ fn sys_waitpid_inner(pid: isize, code: *mut isize) -> isize {
                 );
                 info!("Copied exit code to user space");
             }
+
+            enable_timer_interrupt();
 
             return found_pid as isize;
         } else {
