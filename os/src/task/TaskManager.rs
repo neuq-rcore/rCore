@@ -6,8 +6,6 @@ use crate::sync::UPSafeCell;
 
 use super::task::TaskControlBlock;
 
-
-
 pub struct TaskManager {
     ready_queue: VecDeque<Arc<TaskControlBlock>>,
 }
@@ -30,6 +28,14 @@ impl TaskManager {
     pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
         self.ready_queue.pop_front()
     }
+
+    pub fn remove(&mut self, pid: usize) {
+        self.ready_queue.retain(|task| task.pid() != pid);
+    }
+}
+
+pub fn remove_task(pid: usize) {
+    TASK_MANAGER.exclusive_access().remove(pid);
 }
 
 pub fn add_task(task: Arc<TaskControlBlock>) {

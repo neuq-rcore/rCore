@@ -9,7 +9,6 @@ mod switch;
 mod task;
 
 use alloc::sync::Arc;
-pub use pid::tests as pid_tests;
 
 pub use processor::run_tasks;
 
@@ -21,7 +20,7 @@ use self::{
     pid::pid_alloc,
     processor::{schedule, take_current_task},
     task::{TaskControlBlock, TaskStatus},
-    TaskManager::add_task,
+    TaskManager::{add_task, remove_task},
 };
 
 pub fn kernel_create_process(elf_data: &[u8]) {
@@ -74,15 +73,12 @@ pub fn exit_current_and_run_next(exit_code: i32) {
     inner.exit_code = exit_code;
     // do not move to its parent but under initproc
 
-    // ++++++ access initproc TCB exclusively
-    {
-        // let mut initproc_inner = INITPROC.inner_exclusive_access();
-        // for child in inner.children.iter() {
-        //     child.inner_exclusive_access().parent = Some(Arc::downgrade(&INITPROC));
-        //     initproc_inner.children.push(child.clone());
-        // }
+    for child in inner.children.iter() {
+        let mut child_inner = child.exclusive_inner();
+        child_inner.parent = None;
     }
-    // ++++++ release parent PCB
+
+    remove_task(pid);
 
     inner.children.clear();
     // deallocate user space
