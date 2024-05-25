@@ -1,5 +1,6 @@
 use alloc::sync::Arc;
 use lazy_static::lazy_static;
+use log::info;
 
 use crate::{sync::UPSafeCell, trap::TrapContext};
 
@@ -62,20 +63,22 @@ pub fn run_tasks() {
         let mut processor = PROCESSOR.exclusive_access();
 
         let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
-            // access coming task TCB exclusively
-            let next_task_cx_ptr = task.task_ctx() as *const TaskContext;
-            task.update_status(TaskStatus::Running);
-            // stop exclusively accessing coming task TCB manually
-            processor.current = Some(task.clone());
-            // stop exclusively accessing processor manually
-            drop(processor);
-            unsafe {
-                __switch(
-                    idle_task_cx_ptr,
-                    next_task_cx_ptr,
-                );
-            }
+
+        // access coming task TCB exclusively
+        let next_task_cx_ptr = task.task_ctx() as *const TaskContext;
+        task.update_status(TaskStatus::Running);
+        // stop exclusively accessing coming task TCB manually
+        processor.current = Some(task.clone());
+        // stop exclusively accessing processor manually
+        drop(processor);
+        unsafe {
+            __switch(
+                idle_task_cx_ptr,
+                next_task_cx_ptr,
+            );
+        }
     }
+    info!("No more tasks this round.");
 }
 
 pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {

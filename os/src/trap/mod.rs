@@ -36,6 +36,12 @@ fn set_kernel_trap() -> KernelTrapContext {
     KernelTrapContext
 }
 
+pub fn disable_timer_interrupt() {
+    unsafe {
+        sie::clear_stimer();
+    }
+}
+
 pub fn enable_timer_interrupt() {
     unsafe {
         sie::set_stimer();

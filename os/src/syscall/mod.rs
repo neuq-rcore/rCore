@@ -11,6 +11,8 @@ const SYSCALL_CLONE: usize = 220;
 const SYSCALL_EXEC: usize = 221;
 const SYSCALL_GETCWD: usize = 17;
 const SYSCALL_WAIT: usize = 260;
+const SYSCALL_MOUNT: usize = 40;
+const SYSCALL_UNMOUNT: usize = 39;
 
 mod fs;
 mod process;
@@ -18,6 +20,7 @@ mod system;
 
 use core::ffi::c_char;
 
+use log::warn;
 use log::debug;
 use fs::*;
 use process::*;
@@ -41,7 +44,11 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_EXEC => sys_exec(args[0] as *const u8, args[1] as *const *const c_char, args[2] as *const *const c_char),
         SYSCALL_CLONE => sys_clone(args[0], args[1], args[2]),
         SYSCALL_WAIT => sys_waitpid(args[0] as isize, args[1] as *mut isize, args[2]),
-        _ => panic!("Unsupported syscall_id: {}", syscall_id),
+        SYSCALL_MOUNT | SYSCALL_UNMOUNT => 0,
+        _ => {
+            warn!("Unsupported syscall: {}, kernel killed it.", syscall_id);
+            sys_exit(-1);
+        }
     };
 
     debug!("Syscall returned: {}", ret);

@@ -6,7 +6,7 @@ pub mod processor;
 mod switch;
 
 #[allow(clippy::module_inception)]
-mod task;
+pub mod task;
 
 use alloc::sync::Arc;
 

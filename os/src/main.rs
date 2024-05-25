@@ -64,8 +64,10 @@ fn main() {
         "wait",
         "waitpid",
         "exit",
+        "mount",
+        "umount",
         // "exec", // TODO
-        // "yield", // FIXME
+        "yield", // FIXME
     ];
 
     for entry in entries {

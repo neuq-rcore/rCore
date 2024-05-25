@@ -1,5 +1,7 @@
 use crate::boards::qemu::CLOCK_FREQ;
 use crate::mm::page::PageTable;
+use crate::task::TaskManager::add_to_waiting;
+use crate::trap::{disable_timer_interrupt, enable_timer_interrupt};
 use alloc::sync::Arc;
 use core::arch::asm;
 use core::ffi::c_char;
@@ -180,54 +182,65 @@ fn sys_waitpid_inner(pid: isize, code: *mut isize) -> isize {
     let task = current_task().unwrap();
     let token = task.token();
 
-    let mut inner = task.exclusive_inner();
+    loop {
+        let mut inner = task.exclusive_inner();
+        // find a child process
+        if !inner
+            .children
+            .iter()
+            .any(|p| pid == -1 || pid as usize == p.pid())
+        {
+            return -1;
+        }
 
-    // find a child process
-    if !inner
-        .children
-        .iter()
-        .any(|p| pid == -1 || pid as usize == p.pid())
-    {
-        return -1;
-    }
-    let pair = inner
-        .children
-        .iter()
-        .enumerate()
-        .find(|(_, p)| p.is_zombie() && (pid == -1 || pid as usize == p.pid()));
-    if let Some((idx, _)) = pair {
-        let child = inner.children.remove(idx);
-        assert_eq!(Arc::strong_count(&child), 1);
-        let found_pid = child.pid();
-        let exit_code = child.shared_inner().exit_code;
-        info!(
-            "Found child process: {}, exit code: {}",
-            found_pid, exit_code
-        );
+        let pair = inner
+            .children
+            .iter()
+            .enumerate()
+            .find(|(_, p)| p.is_zombie() && (pid == -1 || pid as usize == p.pid()));
 
-        let exit_code = (exit_code << 8) & 0xff00;
+        if let Some((idx, _)) = pair {
+            let child = inner.children.remove(idx);
+            assert_eq!(Arc::strong_count(&child), 1);
+            let found_pid = child.pid();
+            let exit_code = child.shared_inner().exit_code;
+            info!(
+                "Found child process: {}, exit code: {}, I am {}",
+                found_pid, exit_code, task.pid()
+            );
 
-        PageTable::copy_to_space(
-            token,
-            &exit_code as *const i32 as *const u8,
-            code as *mut u8,
-            core::mem::size_of::<i32>(),
-        );
-        return found_pid as isize;
-    } else {
-        // Wait until the child process exits
-        -2
+            let exit_code = (exit_code << 8) & 0xff00;
+
+            if !code.is_null() {
+                PageTable::copy_to_space(
+                    token,
+                    &exit_code as *const i32 as *const u8,
+                    code as *mut u8,
+                    core::mem::size_of::<i32>(),
+                );
+                info!("Copied exit code to user space");
+            }
+
+            return found_pid as isize;
+        } else {
+            // Wait until the child process exits
+            info!("No child process found, waiting...");
+            drop(inner);
+            let task = task.clone();
+            let assertion = Arc::new(move || {
+                let task = task.clone();
+                let inner = task.shared_inner();
+                inner
+                    .children
+                    .iter()
+                    .any(|p| (pid == -1 || p.pid() == pid as usize) && p.is_zombie())
+            });
+            add_to_waiting(current_task().unwrap(), assertion);
+            suspend_current_and_run_next();
+        }
     }
 }
 
 pub fn sys_waitpid(pid: isize, code: *mut isize, _options: usize) -> isize {
-    loop {
-        let ret = sys_waitpid_inner(pid, code);
-
-        if ret == -2 {
-            sys_yield();
-        } else {
-            return ret;
-        }
-    }
+    sys_waitpid_inner(pid, code)
 }
