@@ -4,6 +4,7 @@ use core::cell::RefMut;
 use alloc::sync::Weak;
 use alloc::sync::Arc;
 use alloc::vec::Vec;
+use log::info;
 
 use crate::mm::address::VirtAddr;
 
@@ -37,6 +38,18 @@ pub struct TaskControlBlockInner {
     pub parent: Option<Weak<TaskControlBlock>>,
     pub children: Vec<Arc<TaskControlBlock>>,
     pub exit_code: i32,
+}
+
+impl Drop for TaskControlBlock {
+    fn drop(&mut self) {
+        info!("TaskControlBlock drop: pid={}", self.pid());
+    }
+}
+
+impl Drop for TaskControlBlockInner {
+    fn drop(&mut self) {
+        info!("TaskControlBlockInner drop: exit_code={}", self.exit_code);
+    }
 }
 
 impl TaskControlBlockInner {

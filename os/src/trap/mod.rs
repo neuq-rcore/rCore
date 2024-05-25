@@ -1,7 +1,6 @@
 mod context;
 
 use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
-use crate::mm::VirtAddr;
 use crate::syscall::syscall;
 use crate::task::{
     exit_current_and_run_next, suspend_current_and_run_next,
@@ -9,8 +8,9 @@ use crate::task::{
 use crate::task::processor::{current_trap_ctx, current_user_token};
 use crate::timer::set_next_trigger;
 pub use context::TrapContext;
+use riscv::register::{mcause, mtval};
 use core::arch::asm;
-use log::debug;
+use log::{debug, warn};
 use riscv::register::{
     mtvec::TrapMode,
     scause::{self, Exception, Interrupt, Trap},
@@ -82,11 +82,12 @@ pub fn trap_handler() -> ! {
                 suspend_current_and_run_next();
             }
             _ => {
-                panic!(
-                    "Unsupported trap {:?}, stval = {:#x}!",
+                warn!(
+                    "Unsupported trap {:?}, stval = {:#x}! Kernel killed it.",
                     scause.cause(),
                     stval
                 );
+                exit_current_and_run_next(-1);
             }
         }
         // drop _kernel_ctx to restore user trap
@@ -141,22 +142,16 @@ pub fn trap_return() -> ! {
 unsafe extern "C" fn on_kernel_trap() -> ! {
     // TODO:
     // 1. Switch to kernel stack
-    asm!("call kernel_trap_intenral", options(noreturn))
+    asm!("j kernel_trap_intenral", options(noreturn))
 }
 
 #[no_mangle]
 fn kernel_trap_intenral() -> ! {
-    let scause = scause::read();
-    let stval = stval::read();
-    panic!("Exception from kernel!, scause: {}, stval: {:#x}", scause.bits(), stval);
+    let mcause = mcause::read();
+    let mtval = mtval::read();
+    panic!("Exception from kernelscause: {}, stval: {:#x}", mcause.bits(), mtval);
 }
 
-// global_asm!(include_str!("trap.S"));
-
-// extern "C" {
-//     pub fn __snap_trap();
-//     pub fn __restore_snap();
-// }
 #[naked]
 #[no_mangle]
 #[link_section = ".text.trampoline"]

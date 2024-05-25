@@ -21,7 +21,7 @@ use crate::fat32::Fat32FileSystem;
 extern crate alloc;
 
 #[macro_use]
-pub mod stdio;
+mod stdio;
 mod boards;
 mod config;
 mod driver;
@@ -32,10 +32,11 @@ mod mm;
 mod sbi;
 mod stack_trace;
 mod sync;
-pub mod syscall;
-pub mod task;
+mod syscall;
+mod task;
 mod timer;
-pub mod trap;
+mod trap;
+mod ramfs;
 
 // Since we've implemented filesystem, we will soon migrate to test suits from sdcard image
 // global_asm!(include_str!("link_app.S"));
