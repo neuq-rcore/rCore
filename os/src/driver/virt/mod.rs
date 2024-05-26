@@ -1,5 +1,7 @@
 use core::mem::forget;
 
+use log::debug;
+
 use virtio_drivers::Hal;
 
 use crate::mm::{
@@ -19,7 +21,7 @@ impl Hal for VirtioHal {
 
         forget(pages);
 
-        // debug!("[#####] dma_alloc: {:#x?}, count: {}", begin_addr, count);
+        debug!("[#####] dma_alloc: {:#x?}, count: {}", begin_addr.0, count);
 
         begin_addr.into()
     }
@@ -27,7 +29,7 @@ impl Hal for VirtioHal {
     fn dma_dealloc(paddr: virtio_drivers::PhysAddr, pages: usize) -> i32 {
         let ppn: PhysAddr = paddr.into();
 
-        // debug!("[#####] dma_dealloc: {:#x?}, count: {}", paddr, pages);
+        debug!("[#####] dma_dealloc: {:#x?}, count: {}", paddr, pages);
         frame_dealloc_contiguous(ppn.into(), pages);
         0
     }

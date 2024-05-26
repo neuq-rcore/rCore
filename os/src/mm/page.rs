@@ -1,4 +1,4 @@
-use alloc::{slice, vec::Vec};
+use alloc::{slice, string::String, vec::Vec};
 use log::debug;
 
 use crate::config::PAGE_SIZE;
@@ -139,6 +139,26 @@ impl PageTable {
         v
     }
 
+    pub fn translate_string(token: usize, ptr: *const u8, limit: usize) -> String {
+        let table = PageTable::from_token(token);
+        let mut string = String::new();
+        let mut va = ptr as usize;
+        let mut bytes_read = 0;
+        while bytes_read < limit {
+            let ch: u8 =
+                unsafe { *(table.translate_va(VirtAddr::from(va)).unwrap().0 as *const u8) };
+            if ch == 0 {
+                break;
+            } else {
+                string.push(ch as char);
+                va += 1;
+            }
+
+            bytes_read += 1;
+        }
+        string
+    }
+
     pub fn copy_to_space(token: usize, src: *const u8, dst: *mut u8, len: usize) -> usize {
         let page_table = PageTable::from_token(token);
         let start = dst as usize;
@@ -184,7 +204,6 @@ impl PageTable {
         let start = src as usize;
         let mut copied_bytes = 0;
 
-
         while copied_bytes < len {
             let start_va = VirtAddr::from(src as usize + copied_bytes);
             let mut vpn = start_va.floor();
@@ -206,8 +225,11 @@ impl PageTable {
                 end_va_offset - start_va_offset
             };
 
-            let src = &ppn.as_page_bytes_slice()[start_va_offset..start_va_offset + bytes_this_page];
-            let dst = unsafe { slice::from_raw_parts_mut((dst as usize + copied_bytes) as *mut u8, bytes_this_page) };
+            let src =
+                &ppn.as_page_bytes_slice()[start_va_offset..start_va_offset + bytes_this_page];
+            let dst = unsafe {
+                slice::from_raw_parts_mut((dst as usize + copied_bytes) as *mut u8, bytes_this_page)
+            };
 
             dst.copy_from_slice(src);
 

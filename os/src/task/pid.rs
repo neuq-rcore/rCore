@@ -95,6 +95,8 @@ impl PidManager {
                 if curr == self.current - 1 {
                     // it's actually safe to gc the recycled pids
                     self.force_reset();
+                } else {
+                    warn!("Recycled pids are not continous");
                 }
             }
         }
@@ -217,6 +219,10 @@ lazy_static! {
 
 pub fn pid_alloc() -> PidHandle {
     PID_ALLOCATOR.exclusive_access().allocate()
+}
+
+pub fn try_gc_pid_allocator() {
+    PID_ALLOCATOR.exclusive_access().try_gc_recycled();
 }
 
 impl Drop for PidHandle {

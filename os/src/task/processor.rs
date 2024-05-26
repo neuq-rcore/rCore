@@ -2,6 +2,7 @@ use alloc::sync::Arc;
 use lazy_static::lazy_static;
 use log::info;
 
+use crate::task::pid::try_gc_pid_allocator;
 use crate::{sync::UPSafeCell, trap::TrapContext};
 
 use super::TaskManager::fetch_task;
@@ -78,6 +79,7 @@ pub fn run_tasks() {
             );
         }
     }
+    try_gc_pid_allocator();
     info!("No more tasks this round.");
 }
 

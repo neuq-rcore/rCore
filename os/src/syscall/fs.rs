@@ -1,6 +1,6 @@
 use alloc::slice;
 
-use crate::task::processor::current_user_token;
+use crate::task::processor::{current_task, current_user_token};
 
 use crate::mm::page::PageTable;
 
@@ -18,7 +18,16 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
             len as isize
         }
         _ => {
-            panic!("Unsupported fd in sys_write!");
+            let task = current_task().unwrap();
+            let inner = task.shared_inner();
+
+            for dups in inner.dup_fds.iter() {
+                if dups.1 == fd as isize {
+                    return sys_write(dups.0 as usize, buf, len);
+                }
+            }
+
+            panic!("Unsupported fd in sys_write!, fd={}", fd);
         }
     }
 }

@@ -174,7 +174,11 @@ impl<'a> Fat32Dir<'a> {
         None
     }
 
-    pub fn read_file_as_buf(&self, path: &str) -> Option<Vec<u8>> {
+    pub fn read_file_as_buf(&self, mut path: &str) -> Option<Vec<u8>> {
+        if path.starts_with('/') {
+            path = &path[1..];
+        }
+
         self.get_file(path).map(|file| {
             let len = file.len();
             let mut buf: Vec<u8> = Vec::with_capacity(len);
