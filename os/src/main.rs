@@ -15,17 +15,19 @@ use fatfs::Read;
 use log::{debug, info};
 use sbi::shutdown;
 
-use crate::fat32::Fat32FileSystem;
+use crate::{fat32::Fat32FileSystem, fs::ROOT_FS};
 
 #[macro_use]
 extern crate alloc;
 
 #[macro_use]
 mod stdio;
+mod allocation;
 mod boards;
 mod config;
 mod driver;
 mod fat32;
+mod fs;
 mod lang_items;
 mod logging;
 mod mm;
@@ -36,73 +38,78 @@ mod syscall;
 mod task;
 mod timer;
 mod trap;
-mod ramfs;
 
 // Since we've implemented filesystem, we will soon migrate to test suits from sdcard image
 // global_asm!(include_str!("link_app.S"));
 
 #[no_mangle]
 fn main() {
-    let fs = Fat32FileSystem::new(0);
-
-    let root_dir = fs.root_dir();
-
-    let entries = root_dir.iter();
-
-    debug!("Filesystem initialized.");
+    // let test_cases = vec![
+    //     "write",
+    //     "gettimeofday",
+    //     "sleep",
+    //     "getpid",
+    //     "getppid",
+    //     "uname",
+    //     "times",
+    //     "fork",
+    //     "clone",
+    //     "wait",
+    //     "waitpid",
+    //     "exit",
+    //     "mount",
+    //     "umount",
+    //     // "exec", // TODO
+    //     "yield", // FIXME
+    // ];
 
     let test_cases = vec![
-        "write",
-        "gettimeofday",
-        "sleep",
+        "brk",
+        "chdir",
+        "clone",
+        "close",
+        "dup2",
+        "dup",
+        "exit",
+        "fork",
+        "fstat",
+        "getcwd",
+        "getdents",
         "getpid",
         "getppid",
-        "uname",
+        "gettimeofday",
+        "mkdir",
+        "mmap",
+        "mount",
+        "munmap",
+        "open",
+        "openat",
+        "pipe",
+        "read",
+        "sleep",
         "times",
-        "fork",
-        "clone",
+        "umount",
+        "uname",
+        "unlink",
         "wait",
         "waitpid",
-        "exit",
-        "mount",
-        "umount",
-        // "exec", // TODO
-        "yield", // FIXME
+        "write",
+        "yield",
     ];
 
-    for entry in entries {
-        if entry.is_err() {
-            continue;
-        }
+    for name in test_cases.into_iter() {
+        let buf = ROOT_FS.root_dir().read_file_as_buf(name);
 
-        let entry = entry.unwrap();
-        if entry.is_dir() {
-            continue;
-        }
+        match buf {
+            Some(buf) => {
+                task::kernel_create_process(&buf);
 
-        let file_name = entry.file_name();
-
-        for (_i, name) in test_cases.iter().enumerate() {
-            if file_name != *name {
-                continue;
+                info!("Running user apps '{}' from sdcard.img", name);
+                task::run_tasks();
             }
-
-            let file_len = entry.len() as usize;
-
-            let mut buf: Vec<u8> = Vec::with_capacity(file_len);
-            unsafe {
-                buf.set_len(file_len);
+            None => {
+                info!("Test case '{}' not found. Skipping.", name);
             }
-
-            let slice = buf.as_mut();
-            let mut file = entry.to_file();
-
-            file.read_exact(slice).unwrap();
-
-            task::kernel_create_process(&buf);
-
-            info!("Running user apps '{}' from sdcard.img", name);
-            task::run_tasks();
         }
     }
 
