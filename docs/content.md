@@ -2,7 +2,7 @@
 
 ## 团队介绍与开发环境介绍
 
-- [技术文档](tech_doc.md)
+- [技术文档](README.md)
 
 - [编程语言](language.md)
 
@@ -10,7 +10,7 @@
 
 ## 项目结构说明
 
-- [内核管理器](implements/kernel_manager.md)
+- [内存管理器](implements/memory_manager.md)
 
 - [文件系统](implements/file_system.md)
 
