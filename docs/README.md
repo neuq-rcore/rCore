@@ -20,22 +20,22 @@
 
 编程语言： [`rust`](language.md)
 
-## Preparation
+## 准备工作
 
-### Build
+### 构建
 
 ```shell
 # or simply run `make`
 make build
 ```
 
-### Run
+### 运行
 
 ```shell
 make run
 ```
 
-### Test
+### 测试
 
 #### 本地测试
 
@@ -68,8 +68,10 @@ make test
 
 ## 参考文档
 
-- [rCore-Tutorial-Book 第三版]([rCore-Tutorial-Book-v3 3.6.0-alpha.1 文档 (rcore-os.cn)](https://rcore-os.cn/rCore-Tutorial-Book-v3/index.html))
-- [从头写一个RISC-V OS--汪辰]([plctlab/riscv-operating-system-mooc: 《从头写一个RISC-V OS》课程配套的资源 (github.com)](https://github.com/plctlab/riscv-operating-system-mooc))
-- [暑期rcore实验笔记]([xsp-daily-work/暑期rcore实验笔记 at master · xushanpu123/xsp-daily-work (github.com)](https://github.com/xushanpu123/xsp-daily-work/tree/master/暑期rcore实验笔记))
+- [rCore-Tutorial-Book-v3 3.6.0-alpha.1 文档 (rcore-os.cn)](https://rcore-os.cn/rCore-Tutorial-Book-v3/index.html)
 
-- [南京大学 计算机科学与技术系 计算机系统基础 课程实验]([Introduction · GitBook (nju-projectn.github.io)](https://nju-projectn.github.io/ics-pa-gitbook/ics2024/))
+- [plctlab/riscv-operating-system-mooc: 《从头写一个RISC-V OS》课程配套的资源 (github.com)](https://github.com/plctlab/riscv-operating-system-mooc)
+
+- [xsp-daily-work/暑期rcore实验笔记 at master · xushanpu123/xsp-daily-work (github.com)](https://github.com/xushanpu123/xsp-daily-work/tree/master/暑期rcore实验笔记)
+
+- [Introduction · GitBook (nju-projectn.github.io)](https://nju-projectn.github.io/ics-pa-gitbook/ics2024/)
