@@ -4,7 +4,7 @@
 
 ## 所有文档
 
-[文档总目录](content.md)
+请查看 [文档总目录](content.md)
 
 ---
 
@@ -17,10 +17,6 @@
 [![Sync to GitLab](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml)
 
 [![OJ Simulation](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml)
-
-## 开发环境
-
-编程语言： [`rust`](language.md)
 
 ## 准备工作
 
@@ -41,13 +37,13 @@ make run
 
 #### 本地测试
 
-在仓库根目录执行
+在仓库根目录执行：
 
 ```bash
 make test
 ```
 
-运行 `make test` 结果
+运行 `make test` 结果：
 
 ![visual_report.png](assets/visual_report.png)
 

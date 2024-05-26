@@ -1,8 +1,10 @@
 # 目录
 
-## 团队介绍与编译环境介绍
+## 团队介绍与开发环境介绍
 
 [技术文档](tech_doc.md)
+
+[编程语言](language.md)
 
 [项目结构](program_struct.md)
 
