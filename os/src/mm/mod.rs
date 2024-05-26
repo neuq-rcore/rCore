@@ -56,9 +56,19 @@ impl MapArea {
         let end = self.range.end.0;
         start..end
     }
+
+    pub fn from_another(them: &MapArea) -> Self {
+        Self {
+            range: them.range.clone(),
+            data_frames: BTreeMap::new(),
+            map_type: them.map_type,
+            permission: them.permission,
+        }
+    }
 }
 
 bitflags! {
+    #[derive(Clone, Copy)]
     pub struct MapPermission: u8 {
         const R = 1 << 1;
         const W = 1 << 2;
@@ -115,10 +125,45 @@ impl MemorySpace {
         self.page_table.map(
             VirtAddr::from(TRAMPOLINE).into(),
             PhysAddr::from(strampoline as usize).into(),
-            PageTableEntryFlags::R | PageTableEntryFlags::X ,
+            PageTableEntryFlags::R | PageTableEntryFlags::X,
         );
     }
 
+    ///Remove `MapArea` that starts with `start_vpn`
+    pub fn remove_area_with_start_vpn(&mut self, start_vpn: VirtPageNum) {
+        if let Some((idx, area)) = self
+            .areas
+            .iter_mut()
+            .enumerate()
+            .find(|(_, area)| area.range.start == start_vpn)
+        {
+            area.unmap_many(&mut self.page_table);
+            self.areas.remove(idx);
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.areas.clear();
+    }
+
+    pub fn from_existed_space(them_space: &MemorySpace) -> Self {
+        let mut this_space = Self::new_empty();
+        this_space.map_trampoline();
+
+        // copy data sections/trap_context/user_stack
+        for area in them_space.areas.iter() {
+            let new_area = MapArea::from_another(area);
+            this_space.push(new_area, None);
+            // copy data from another space
+            for vpn in area.vpn_range() {
+                let src_ppn = them_space.page_table.translate(VirtPageNum::from(vpn)).unwrap().ppn();
+                let dst_ppn = this_space.page_table.translate(VirtPageNum::from(vpn)).unwrap().ppn();
+                dst_ppn.as_page_bytes_slice().copy_from_slice(src_ppn.as_page_bytes_slice());
+            }
+        }
+
+        this_space
+    }
 }
 
 impl MapArea {
@@ -330,7 +375,7 @@ impl KernelSpace {
 lazy_static! {
     /// a memory set instance through lazy_static! managing kernel space
     pub static ref KERNEL_SPACE: Arc<UPSafeCell<MemorySpace>> =
-        Arc::new(unsafe { UPSafeCell::new(KernelSpace::new()) });
+        Arc::new(UPSafeCell::new(KernelSpace::new()));
 }
 
 pub fn kernel_token() -> usize {
@@ -396,7 +441,10 @@ impl UserSpace {
         user_stack_bottom += PAGE_SIZE;
 
         let user_stack_top = user_stack_bottom + USER_STACK_SIZE;
-        debug!("Mapping user stack 0x{:08X}..0x{:08X}", user_stack_bottom, user_stack_top);
+        debug!(
+            "Mapping user stack 0x{:08X}..0x{:08X}",
+            user_stack_bottom, user_stack_top
+        );
         user_space.push(
             MapArea::new(
                 user_stack_bottom.into(),
@@ -429,17 +477,6 @@ impl UserSpace {
                 MapPermission::R | MapPermission::W,
             ),
             None,
-        );
-
-        extern "C" {
-            fn strampoline();
-        }
-
-        // To allow instructions in `__restore_snap` to be executed
-        user_space.page_table.map(
-            VirtAddr::from(strampoline as usize).into(),
-            PhysAddr::from(strampoline as usize).into(),
-            PageTableEntryFlags::R | PageTableEntryFlags::X,
         );
 
         (

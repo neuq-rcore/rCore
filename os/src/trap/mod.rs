@@ -1,14 +1,16 @@
 mod context;
 
-use crate::config::TRAP_CONTEXT;
+use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
 use crate::syscall::syscall;
 use crate::task::{
-    current_trap_cx, current_user_token, exit_current_and_run_next, suspend_current_and_run_next,
+    exit_current_and_run_next, suspend_current_and_run_next,
 };
+use crate::task::processor::{current_trap_ctx, current_user_token};
 use crate::timer::set_next_trigger;
 pub use context::TrapContext;
-use core::arch::{asm};
-use log::debug;
+use riscv::register::{mcause, mtval};
+use core::arch::asm;
+use log::{debug, warn};
 use riscv::register::{
     mtvec::TrapMode,
     scause::{self, Exception, Interrupt, Trap},
@@ -21,8 +23,9 @@ pub fn init() {
 
 fn set_user_trap() {
     debug!("Entering user trap mode");
+    let user_trap_va = TRAMPOLINE + (__snap_trap as usize - __snap_trap as usize);
     unsafe {
-        stvec::write(__snap_trap as usize, TrapMode::Direct);
+        stvec::write(user_trap_va as usize, TrapMode::Direct);
     }
 }
 
@@ -31,6 +34,12 @@ fn set_kernel_trap() -> KernelTrapContext {
     unsafe { stvec::write(on_kernel_trap as usize, TrapMode::Direct) }
 
     KernelTrapContext
+}
+
+pub fn disable_timer_interrupt() {
+    unsafe {
+        sie::clear_stimer();
+    }
 }
 
 pub fn enable_timer_interrupt() {
@@ -45,34 +54,46 @@ pub fn trap_handler() -> ! {
         let _kernel_ctx = KernelTrapContext::enter();
         let scause = scause::read();
         let stval = stval::read();
-        let ctx = current_trap_cx();
+        let mut ctx = current_trap_ctx();
     
         match scause.cause() {
             Trap::Exception(Exception::UserEnvCall) => {
+                // // jump to next instruction anyway
+                // let mut cx = current_trap_cx();
+                // cx.sepc += 4;
+                // // get system call return value
+                // let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]);
+                // // cx is changed during sys_exec, so we have to call it again
+                // cx = current_trap_cx();
+                // cx.x[10] = result as usize;
+
                 ctx.sepc += 4;
-                ctx.x[10] = syscall(ctx.x[17], [ctx.x[10], ctx.x[11], ctx.x[12]]) as usize;
+                let result = syscall(ctx.x[17], [ctx.x[10], ctx.x[11], ctx.x[12]]) as usize;
+                ctx = current_trap_ctx();
+                ctx.x[10] = result;
             }
             Trap::Exception(Exception::StoreFault)
             | Trap::Exception(Exception::StorePageFault)
             | Trap::Exception(Exception::LoadFault)
             | Trap::Exception(Exception::LoadPageFault) => {
                 println!("[kernel] PageFault in application, bad addr = {:#x}, bad instruction = {:#x}, kernel killed it.", stval, ctx.sepc);
-                exit_current_and_run_next();
+                exit_current_and_run_next(-2);
             }
             Trap::Exception(Exception::IllegalInstruction) => {
-                println!("[kernel] IllegalInstruction in application, kernel killed it.");
-                exit_current_and_run_next();
+                println!("[kernel] IllegalInstruction in application, kernel killed it. PC: {:#x}", ctx.sepc);
+                exit_current_and_run_next(-3);
             }
             Trap::Interrupt(Interrupt::SupervisorTimer) => {
                 set_next_trigger();
                 suspend_current_and_run_next();
             }
             _ => {
-                panic!(
-                    "Unsupported trap {:?}, stval = {:#x}!",
+                warn!(
+                    "Unsupported trap {:?}, stval = {:#x}! Kernel killed it.",
                     scause.cause(),
                     stval
                 );
+                exit_current_and_run_next(-1);
             }
         }
         // drop _kernel_ctx to restore user trap
@@ -102,7 +123,7 @@ pub fn trap_return() -> ! {
     let trap_ctx = TRAP_CONTEXT;
     let user_satp = current_user_token();
 
-    let restore_va: usize = __restore_snap as usize;
+    let restore_va: usize = TRAMPOLINE + (__restore_snap as usize - __snap_trap as usize);
 
     debug!("restore_va: {:#x}", restore_va);
     debug!("user_satp: {:#x}", user_satp);
@@ -127,22 +148,16 @@ pub fn trap_return() -> ! {
 unsafe extern "C" fn on_kernel_trap() -> ! {
     // TODO:
     // 1. Switch to kernel stack
-    asm!("call kernel_trap_intenral", options(noreturn))
+    asm!("j kernel_trap_intenral", options(noreturn))
 }
 
 #[no_mangle]
 fn kernel_trap_intenral() -> ! {
-    let scause = scause::read();
-    let stval = stval::read();
-    panic!("Exception from kernel!, scause: {}, stval: {:#x}", scause.bits(), stval);
+    let mcause = mcause::read();
+    let mtval = mtval::read();
+    panic!("Exception from kernelscause: {}, stval: {:#x}", mcause.bits(), mtval);
 }
 
-// global_asm!(include_str!("trap.S"));
-
-// extern "C" {
-//     pub fn __snap_trap();
-//     pub fn __restore_snap();
-// }
 #[naked]
 #[no_mangle]
 #[link_section = ".text.trampoline"]
@@ -238,7 +253,7 @@ pub unsafe extern "C" fn __snap_trap() -> ! {
 #[naked]
 #[no_mangle]
 #[link_section = ".text.trampoline"]
-pub unsafe extern "C" fn __restore_snap(/*context_snap: *const TrapContext, user_token: usize*/) -> !
+pub unsafe extern "C" fn __restore_snap(/*snaped_context: *const TrapContext, user_token: usize*/) -> !
 {
     // see `__snap_trap` for the stack layout
     asm!(

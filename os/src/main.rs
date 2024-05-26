@@ -9,90 +9,112 @@
     custom_test_frameworks
 )]
 
-use core::{
-    arch::asm,
-    slice,
-};
+use core::{arch::asm, slice};
 
 use alloc::vec::Vec;
 use fatfs::Read;
 use log::{debug, info};
 use sbi::shutdown;
 
-use crate::fat32::Fat32FileSystem;
+use crate::{fat32::Fat32FileSystem, fs::ROOT_FS};
 
 #[macro_use]
 extern crate alloc;
 
 #[macro_use]
-pub mod stdio;
+mod stdio;
+mod allocation;
 mod boards;
 mod config;
 mod driver;
 mod fat32;
+mod fs;
 mod lang_items;
-mod loader;
 mod logging;
 mod mm;
 mod sbi;
 mod stack_trace;
 mod sync;
-pub mod syscall;
-pub mod task;
+mod syscall;
+mod task;
 mod timer;
-pub mod trap;
+mod trap;
+
+// Since we've implemented filesystem, we will soon migrate to test suits from sdcard image
+// global_asm!(include_str!("link_app.S"));
 
 #[no_mangle]
 fn main() {
-    let fs = Fat32FileSystem::new(0);
+    // let test_cases = vec![
+    //     "write",
+    //     "gettimeofday",
+    //     "sleep",
+    //     "getpid",
+    //     "getppid",
+    //     "uname",
+    //     "times",
+    //     "fork",
+    //     "clone",
+    //     "wait",
+    //     "waitpid",
+    //     "exit",
+    //     "mount",
+    //     "umount",
+    //     // "exec", // TODO
+    //     "yield", // FIXME
+    // ];
 
-    let root_dir = fs.root_dir();
+    let test_cases = vec![
+        "brk",
+        "chdir",
+        "clone",
+        "close",
+        "dup2",
+        "dup",
+        "exit",
+        "fork",
+        "fstat",
+        "getcwd",
+        "getdents",
+        "getpid",
+        "getppid",
+        "gettimeofday",
+        "mkdir",
+        "mmap",
+        "mount",
+        "munmap",
+        "open",
+        "openat",
+        "pipe",
+        "read",
+        "sleep",
+        "times",
+        "umount",
+        "uname",
+        "unlink",
+        "wait",
+        "waitpid",
+        "write",
+        "yield",
+    ];
 
-    let entries = root_dir.iter();
+    for name in test_cases.into_iter() {
+        let buf = ROOT_FS.root_dir().read_file_as_buf(name);
 
-    debug!("Filesystem initialized.");
+        match buf {
+            Some(buf) => {
+                task::kernel_create_process(&buf);
 
-    let test_cases = vec!["write", "gettimeofday", "sleep", "getpid", "getppid", "uname", "times"];
-
-    for entry in entries {
-        if entry.is_err() {
-            continue;
-        }
-
-        let entry = entry.unwrap();
-        if entry.is_dir() {
-            continue;
-        }
-
-        let file_name = entry.file_name();
-
-        for name in test_cases.iter() {
-            if file_name != *name {
-                continue;
+                info!("Running user apps '{}' from sdcard.img", name);
+                task::run_tasks();
             }
-
-            let file_len = entry.len() as usize;
-            
-            let mut buf: Vec<u8> = Vec::with_capacity(file_len);
-            unsafe {
-                buf.set_len(file_len);
+            None => {
+                info!("Test case '{}' not found. Skipping.", name);
             }
-
-            let slice = buf.as_mut();
-            let mut file = entry.to_file();
-
-            file.read_exact(slice).unwrap();
-
-            let id = loader::load_app(buf);
-            loader::add_pending_task(id).unwrap();
         }
     }
 
-    loader::load_apps();
-
-    debug!("Running test programs from sdcard.img");
-
-    task::run_first_task();
+    debug!("All tests finished. Shutting down.")
 }
 
 #[naked]
@@ -119,10 +141,8 @@ unsafe extern "C" fn __kernel_start_main() -> ! {
     mm::init();
 
     trap::init();
-
-    // temporarily disable this because we have to run test programs synchronously
-    // trap::enable_timer_interrupt();
-    // timer::set_next_trigger();
+    trap::enable_timer_interrupt();
+    timer::set_next_trigger();
 
     debug_env();
 

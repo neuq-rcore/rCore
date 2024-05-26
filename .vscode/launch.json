@@ -15,6 +15,10 @@
             "preLaunchTask": "Qemu",
             "miDebuggerPath": "/usr/bin/riscv64-elf-gdb",
             "miDebuggerServerAddress": "localhost:1234",
+            "hardwareBreakpoints": {
+                "require": true,
+                "limit": 4
+            },
             "setupCommands": [
                 {
                     "description": "Enable pretty-printing for gdb",

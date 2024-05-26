@@ -2,14 +2,9 @@ use core::mem::forget;
 
 use virtio_drivers::Hal;
 
-use log::debug;
-
-// use crate::mm::page_table::PageTable;
-// use crate::mm::memory_set::KERNEL_SPACE;
-
 use crate::mm::{
     frame::{frame_alloc_contiguous, frame_dealloc_contiguous},
-    PhysAddr, VirtAddr,
+    PhysAddr,
 };
 pub const VIRTIO0: usize = 0x1000_1000;
 

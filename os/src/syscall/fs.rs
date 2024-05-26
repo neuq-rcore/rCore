@@ -1,8 +1,12 @@
 use alloc::slice;
 
-use crate::{mm::page::PageTable, task::current_user_token};
+use crate::task::processor::current_user_token;
 
+use crate::mm::page::PageTable;
+
+const FD_STDIN: usize = 0;
 const FD_STDOUT: usize = 1;
+const FD_STDERR: usize = 2;
 
 pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
     match fd {
