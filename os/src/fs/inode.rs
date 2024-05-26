@@ -152,6 +152,8 @@ impl<'a> Fat32Dir<'a> {
     }
 
     pub fn get_file(&self, path: &str) -> Option<Fat32File> {
+        let path = if path.starts_with('/') { &path[1..] } else { path };
+
         let mut paths = path.split('/').into_iter();
         let mut next_path = paths.next();
         let mut cwd: RefOrValue<Fat32Dir> = RefOrValue::from_ref(self);
@@ -174,11 +176,7 @@ impl<'a> Fat32Dir<'a> {
         None
     }
 
-    pub fn read_file_as_buf(&self, mut path: &str) -> Option<Vec<u8>> {
-        if path.starts_with('/') {
-            path = &path[1..];
-        }
-
+    pub fn read_file_as_buf(&self, path: &str) -> Option<Vec<u8>> {
         self.get_file(path).map(|file| {
             let len = file.len();
             let mut buf: Vec<u8> = Vec::with_capacity(len);
