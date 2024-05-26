@@ -39,7 +39,7 @@ make run
 
 在仓库根目录执行：
 
-```bash
+```shell
 make test
 ```
 
