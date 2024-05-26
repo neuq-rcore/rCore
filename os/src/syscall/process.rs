@@ -1,11 +1,10 @@
 use crate::boards::qemu::CLOCK_FREQ;
-use crate::fs::ROOT_FS;
+use crate::fs::get_fs;
 use crate::mm::page::PageTable;
 use crate::task::TaskManager::add_to_waiting;
 use crate::trap::{disable_timer_interrupt, enable_timer_interrupt};
 use alloc::sync::Arc;
 use core::arch::asm;
-use core::ffi::c_char;
 use log::*;
 
 use crate::task::processor::{current_task, current_user_token};
@@ -151,8 +150,8 @@ pub fn sys_clone(flags: usize, sp: usize, ptid: usize) -> isize {
 #[no_mangle]
 pub fn sys_exec(
     pathname: *const u8,
-    _argv: *const *const c_char,
-    _envp: *const *const c_char,
+    _argv: *const *const u8,
+    _envp: *const *const u8,
 ) -> isize {
     let task = current_task().unwrap();
     let token = current_user_token();
@@ -168,21 +167,21 @@ pub fn sys_exec(
 
     info!("Exec: {}", pathname);
 
-    let root = ROOT_FS.root_dir();
+    // // let buf = [100; 1024];
+    // print!("{:?}", buf);
 
-    error!("here");
+    let root_dir = get_fs().clone();
 
-    let read = root.read_file_as_buf(&pathname);
+    root_dir.root_dir().inner().open_file("test_echo").unwrap();
+    // let elf_bytes = match read {
+    //     Some(buf) => buf,
+    //     None => {
+    //         warn!("Failed to read file: {}", pathname);
+    //         return -1;
+    //     }
+    // };
 
-    let elf_bytes = match read {
-        Some(buf) => buf,
-        None => {
-            warn!("Failed to read file: {}", pathname);
-            return -1;
-        }
-    };
-
-    task.exec(&elf_bytes);
+    // task.exec(&elf_bytes);
 
     // todo implement argc, argv and envp
 

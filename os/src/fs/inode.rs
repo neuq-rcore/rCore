@@ -1,4 +1,4 @@
-use alloc::{string::String, vec::Vec};
+use alloc::{string::String, sync::Arc, vec::Vec};
 use bitflags::bitflags;
 use fatfs::{Dir, File, LossyOemCpConverter, NullTimeProvider, Read};
 
@@ -54,10 +54,10 @@ impl<'a> Fat32DirInner<'a> {
         Self::Sub(entry)
     }
 
-    pub fn as_dir(&self) -> FatfsDir<'a> {
+    pub fn as_dir(&self) -> Arc<FatfsDir<'a>> {
         match self {
-            Self::Root(dir) => dir.clone(),
-            Self::Sub(entry) => entry.to_dir(),
+            Self::Root(dir) => Arc::new(dir.clone()),
+            Self::Sub(entry) => Arc::new(entry.to_dir()),
         }
     }
 }
@@ -93,7 +93,7 @@ impl<'a> Fat32Dir<'a> {
         }
     }
 
-    pub fn inner(&self) -> FatfsDir<'a> {
+    pub fn inner(&self) -> Arc<FatfsDir<'a>> {
         self.inner.as_dir()
     }
 

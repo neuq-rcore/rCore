@@ -5,17 +5,15 @@
     slice_from_ptr_range,
     naked_functions,
     alloc_error_handler,
-    vec_into_raw_parts
+    vec_into_raw_parts,
 )]
 
 use core::{arch::asm, slice};
 
-use alloc::vec::Vec;
-use fatfs::Read;
 use log::{debug, info};
 use sbi::shutdown;
 
-use crate::{fat32::Fat32FileSystem, fs::ROOT_FS};
+use crate::fs::get_fs;
 
 #[macro_use]
 extern crate alloc;
@@ -99,7 +97,7 @@ fn main() {
     ];
 
     for name in test_cases.into_iter() {
-        let buf = ROOT_FS.root_dir().read_file_as_buf(name);
+        let buf = get_fs().root_dir().read_file_as_buf(name);
 
         match buf {
             Some(buf) => {
