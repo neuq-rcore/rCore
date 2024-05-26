@@ -1,8 +1,9 @@
 use core::cell::Ref;
 use core::cell::RefMut;
 
-use alloc::sync::Weak;
+use alloc::string::String;
 use alloc::sync::Arc;
+use alloc::sync::Weak;
 use alloc::vec::Vec;
 use log::info;
 
@@ -12,9 +13,7 @@ use crate::sync::UPSafeCell;
 use crate::task::pid::pid_alloc;
 use crate::{
     config::TRAP_CONTEXT,
-    mm::{
-        kernel_token, MemorySpace, PhysAddr, PhysPageNum, UserSpace,
-    },
+    mm::{kernel_token, MemorySpace, PhysAddr, PhysPageNum, UserSpace},
     trap::{trap_handler, TrapContext},
 };
 
@@ -26,7 +25,7 @@ pub struct TaskControlBlock {
     pub pid: PidHandle,
     pub kernel_stack: KernelStack,
     // mutable
-    inner: UPSafeCell<TaskControlBlockInner>,    
+    inner: UPSafeCell<TaskControlBlockInner>,
 }
 
 pub struct TaskControlBlockInner {
@@ -38,6 +37,9 @@ pub struct TaskControlBlockInner {
     pub parent: Option<Weak<TaskControlBlock>>,
     pub children: Vec<Arc<TaskControlBlock>>,
     pub exit_code: i32,
+    pub cwd: String,
+    pub heap_pos: usize,
+    pub dup_fds: [(isize, isize); 10]
 }
 
 impl Drop for TaskControlBlock {
@@ -105,15 +107,11 @@ impl TaskControlBlock {
     }
 
     pub fn task_ctx_mut<'a>(&'a mut self) -> &'a mut TaskContext {
-        unsafe {
-            &mut *(&mut self.exclusive_inner().task_ctx as *mut TaskContext)
-        }
+        unsafe { &mut *(&mut self.exclusive_inner().task_ctx as *mut TaskContext) }
     }
 
     pub fn task_ctx<'a>(&'a self) -> &'a TaskContext {
-        unsafe {
-            &*(&self.shared_inner().task_ctx as *const TaskContext)
-        }
+        unsafe { &*(&self.shared_inner().task_ctx as *const TaskContext) }
     }
 }
 
@@ -139,6 +137,9 @@ impl TaskControlBlock {
             parent: None,
             children: Vec::new(),
             exit_code: 0,
+            cwd: String::from("/"),
+            heap_pos: 0,
+            dup_fds: [(-1, -1); 10]
         };
 
         let kernel_token = kernel_token();
@@ -165,14 +166,14 @@ impl TaskControlBlock {
         self.pid.0
     }
 
-    pub fn exec(&mut self, elf_bytes: &[u8]) {
+    pub fn exec(&self, elf_bytes: &[u8]) {
         let (new_space, user_sp, entry_point) = UserSpace::from_elf(elf_bytes);
         let trap_cx_ppn = new_space
             .table()
             .translate(VirtAddr::from(TRAP_CONTEXT).into())
             .unwrap()
             .ppn();
-        
+
         let mut inner = self.exclusive_inner();
         inner.memory_space = new_space;
         inner.trap_ctx_ppn = trap_cx_ppn;
@@ -213,6 +214,9 @@ impl TaskControlBlock {
             parent: Some(Arc::downgrade(self)),
             children: Vec::new(),
             exit_code: 0,
+            cwd: parent_inner.cwd.clone(),
+            heap_pos: 0,
+            dup_fds: parent_inner.dup_fds.clone()
         });
 
         let child_control_block = Arc::new(TaskControlBlock {

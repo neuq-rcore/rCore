@@ -48,6 +48,7 @@ impl TaskManager {
 
     pub fn remove(&mut self, pid: usize) {
         self.ready_queue.retain(|task| task.pid() != pid);
+        self.waiting_queue.retain(|taskdesc| taskdesc.0.pid() != pid);
     }
 
     pub fn add_to_waiting(

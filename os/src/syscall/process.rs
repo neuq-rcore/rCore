@@ -1,9 +1,9 @@
 use crate::boards::qemu::CLOCK_FREQ;
+use crate::fs::ROOT_FS;
 use crate::mm::page::PageTable;
 use crate::task::TaskManager::add_to_waiting;
 use crate::trap::{disable_timer_interrupt, enable_timer_interrupt};
 use alloc::sync::Arc;
-use riscv::interrupt::disable;
 use core::arch::asm;
 use core::ffi::c_char;
 use log::*;
@@ -148,12 +148,45 @@ pub fn sys_clone(flags: usize, sp: usize, ptid: usize) -> isize {
     child_pid as isize
 }
 
-pub fn sys_exec(pathname: *const u8, argv: *const *const c_char, envp: *const *const c_char) -> ! {
+#[no_mangle]
+pub fn sys_exec(
+    pathname: *const u8,
+    _argv: *const *const c_char,
+    _envp: *const *const c_char,
+) -> isize {
+    let task = current_task().unwrap();
     let token = current_user_token();
+    let cwd = task.shared_inner().cwd.clone();
+    let pathname = PageTable::translate_string(token, pathname, 1024);
+    let pathname = match pathname.starts_with("/") {
+        true => pathname,
+        false => match cwd.ends_with('/') {
+            true => format!("{}{}", cwd, pathname),
+            false => format!("{}/{}", cwd, pathname),
+        },
+    };
 
-    // TODO: read the file and load the elf
+    info!("Exec: {}", pathname);
 
-    unimplemented!()
+    let root = ROOT_FS.root_dir();
+
+    error!("here");
+
+    let read = root.read_file_as_buf(&pathname);
+
+    let elf_bytes = match read {
+        Some(buf) => buf,
+        None => {
+            warn!("Failed to read file: {}", pathname);
+            return -1;
+        }
+    };
+
+    task.exec(&elf_bytes);
+
+    // todo implement argc, argv and envp
+
+    0
 }
 
 pub fn sys_getppid() -> isize {
@@ -182,7 +215,7 @@ pub fn sys_getpid() -> isize {
 fn sys_waitpid_inner(pid: isize, code: *mut isize) -> isize {
     let task = current_task().unwrap();
     let token = task.token();
-    
+
     loop {
         disable_timer_interrupt();
 
@@ -209,7 +242,9 @@ fn sys_waitpid_inner(pid: isize, code: *mut isize) -> isize {
             let exit_code = child.shared_inner().exit_code;
             info!(
                 "Found child process: {}, exit code: {}, I am {}",
-                found_pid, exit_code, task.pid()
+                found_pid,
+                exit_code,
+                task.pid()
             );
 
             let exit_code = (exit_code << 8) & 0xff00;
@@ -248,4 +283,67 @@ fn sys_waitpid_inner(pid: isize, code: *mut isize) -> isize {
 
 pub fn sys_waitpid(pid: isize, code: *mut isize, _options: usize) -> isize {
     sys_waitpid_inner(pid, code)
+}
+
+pub fn sys_getcwd(buf: *mut u8, buf_len: usize) -> isize {
+    let task = current_task().unwrap();
+    let token = task.token();
+    let inner = task.shared_inner();
+    let cwd = inner.cwd.as_bytes();
+
+    // we have to include '\0'
+    if cwd.len() + 1 > buf_len {
+        return -1;
+    }
+
+    PageTable::copy_to_space(token, cwd.as_ptr(), buf, cwd.len());
+
+    buf as usize as isize
+}
+
+pub fn sys_brk(brk: usize) -> isize {
+    let task = current_task().unwrap();
+    let mut inner = task.exclusive_inner();
+    let old_brk = inner.heap_pos;
+
+    if brk == 0 {
+        return old_brk as isize;
+    }
+
+    inner.heap_pos = brk;
+
+    brk as isize
+}
+
+pub fn sys_dup2(old_fd: isize, new_fd: isize) -> isize {
+    let task = current_task().unwrap();
+    let mut inner = task.exclusive_inner();
+
+    for dups in inner.dup_fds.iter_mut() {
+        if new_fd != -1 && dups.0 == -1 {
+            dups.0 = old_fd;
+            dups.1 = new_fd;
+
+            return new_fd;
+        } else if new_fd == -1 && dups.0 == old_fd {
+            dups.0 = -1;
+            dups.1 = -1;
+
+            return new_fd;
+        }
+    }
+
+    new_fd
+}
+
+pub fn sys_chdir(path: *const u8) -> isize {
+    let task = current_task().unwrap();
+    let token = task.token();
+    let path = PageTable::translate_string(token, path, 1024);
+
+    let mut inner = task.exclusive_inner();
+
+    inner.cwd = path;
+
+    0
 }
