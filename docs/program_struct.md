@@ -1,22 +1,35 @@
 # 项目架构
 
-```
-.
+省略部分无关目录。
+
+```shell
+neuqOS
 ├── bootloader
-│  ├── opensbi-qemu.bin  
+│  ├── opensbi-qemu.bin
 │  ├── rustsbi-k210.bin
 │  └── rustsbi-qemu.bin
-├── docs
-│  ├── README.md
-│  └── ...
-├── LICENSE
+├── docs # 文档
+│  ├── assets
+│  │  ├── neuq.jpg
+│  │  └── visual_report.png
+│  ├── content.md # 文档总目录
+│  ├── implements
+│  │  ├── device_manager.md
+│  │  ├── file_system.md
+│  │  ├── memory_manager.md
+│  │  └── process_manager.md
+│  ├── language.md
+│  └── program_struct.md
+├── LICENSE # MIT许可
 ├── Makefile
-├── os
-│  ├── Cargo.lock
-│  ├── Cargo.toml
+├── os # S 级
+│  ├── Cargo.lock # cargo 依赖管理（自动生成）
+│  ├── Cargo.toml # cargo 配置文件
 │  ├── Makefile
 │  └── src
-│     ├── boards 板卡相关信息
+│     ├── allocation
+│     │  └── mod.rs
+│     ├── boards # 板卡相关信息
 │     │  ├── mod.rs
 │     │  └── qemu.rs
 │     ├── config.rs
@@ -24,15 +37,17 @@
 │     │  ├── mod.rs
 │     │  └── virt
 │     │     └── mod.rs
-│     ├── fat32  FAT32文件实现
+│     ├── fat32 # FAT32 文件系统
 │     │  ├── mod.rs
 │     │  └── virt.rs
+│     ├── fs # 文件系统
+│     │  ├── inode.rs
+│     │  └── mod.rs
 │     ├── lang_items.rs
 │     ├── linker-qemu.ld
-│     ├── loader.rs
 │     ├── logging.rs
 │     ├── main.rs
-│     ├── mm mmu实现
+│     ├── mm # MMU
 │     │  ├── address.rs
 │     │  ├── frame.rs
 │     │  ├── heap.rs
@@ -48,33 +63,33 @@
 │     ├── sync
 │     │  ├── mod.rs
 │     │  └── up.rs
-│     ├── syscall 系统调用实现
+│     ├── syscall # 系统调用
 │     │  ├── fs.rs
 │     │  ├── mod.rs
 │     │  ├── process.rs
 │     │  └── system.rs
-│     ├── task 
+│     ├── task
 │     │  ├── context.rs
 │     │  ├── mod.rs
+│     │  ├── pid.rs
+│     │  ├── processor.rs
 │     │  ├── switch.rs
 │     │  ├── switch.S
-│     │  └── task.rs
-│     ├── timer.rs 定时实现
-│     └── trap  trap实现
+│     │  ├── task.rs
+│     │  └── TaskManager.rs
+│     ├── timer.rs # 计时器
+│     └── trap
 │        ├── context.rs
 │        ├── mod.rs
 │        └── trap.S
 ├── README.md
 ├── rust-toolchain.toml
-├── sdcard.img
 ├── test
-├── test_close.txt
-├── test_mmap.txt
-├── thirdparty
-└── user
+├── thirdparty # 第三方依赖
+└── user # U 级
    ├── build.py
-   ├── Cargo.lock
-   ├── Cargo.toml
+   ├── Cargo.lock # cargo 依赖管理（自动生成）
+   ├── Cargo.toml # cargo 配置文件
    ├── Makefile
    └── src
       ├── bin
@@ -86,5 +101,5 @@
       ├── lang_items.rs
       ├── lib.rs
       ├── linker-qemu.ld
-      └── syscall.rs
+      └── syscall.rs # 系统调用
 ```
