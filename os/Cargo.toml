@@ -10,7 +10,7 @@ log = "0.4"
 sbi-rt = { version = "0.0.3", features = ["legacy"] }
 sbi-spec = "0.0.7"
 fatfs = { git = "https://github.com/neuq-rcore/rust-fatfs", default-features = false, features = ["lfn", "alloc", "unicode"] }
-virtio-drivers = { git = "https://github.com/rcore-os/virtio-drivers", rev = "4ee80e5" }
+virtio-drivers = "0.7.2"
 buddy_system_allocator = { git = "https://github.com/neuq-rcore/buddy_system_allocator" }
 bitflags = "2.5.0"
 xmas-elf = { git = "https://github.com/nrc/xmas-elf.git" }
