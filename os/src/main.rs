@@ -42,25 +42,6 @@ mod trap;
 
 #[no_mangle]
 fn main() {
-    // let test_cases = vec![
-    //     "write",
-    //     "gettimeofday",
-    //     "sleep",
-    //     "getpid",
-    //     "getppid",
-    //     "uname",
-    //     "times",
-    //     "fork",
-    //     "clone",
-    //     "wait",
-    //     "waitpid",
-    //     "exit",
-    //     "mount",
-    //     "umount",
-    //     // "exec", // TODO
-    //     "yield", // FIXME
-    // ];
-
     let test_cases = vec![
         "execve",
         "brk",
@@ -77,7 +58,7 @@ fn main() {
         "getpid",
         "getppid",
         "gettimeofday",
-        "mkdir",
+        "mkdir_",
         "mmap",
         "mount",
         "munmap",
