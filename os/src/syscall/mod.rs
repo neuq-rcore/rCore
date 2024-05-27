@@ -46,7 +46,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_UNAME => sys_uname(args[0] as *mut Utsname),
         SYSCALL_GETPID => sys_getpid(),
         SYSCALL_GETPPID => sys_getppid(),
-        // SYSCALL_EXEC => sys_exec(args[0] as *const u8, args[1] as *const *const u8, args[2] as *const *const u8),
+        SYSCALL_EXEC => sys_exec(args[0] as *const u8, args[1] as *const *const u8, args[2] as *const *const u8),
         SYSCALL_CLONE => sys_clone(args[0], args[1], args[2]),
         SYSCALL_WAIT => sys_waitpid(args[0] as isize, args[1] as *mut isize, args[2]),
         SYSCALL_MOUNT | SYSCALL_UNMOUNT => 0,
