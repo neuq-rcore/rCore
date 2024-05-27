@@ -179,7 +179,7 @@ pub fn sys_exec(
         }
     };
 
-    task.exec(&elf_bytes);
+    // task.exec(&elf_bytes);
 
     // todo implement argc, argv and envp
 
