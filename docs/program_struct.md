@@ -8,28 +8,32 @@ neuqOS
 │  ├── opensbi-qemu.bin
 │  ├── rustsbi-k210.bin
 │  └── rustsbi-qemu.bin
-├── docs # 文档
+├── docs
 │  ├── assets
+│  │  ├── final_score_report.jpg
 │  │  ├── neuq.jpg
 │  │  └── visual_report.png
-│  ├── content.md # 文档总目录
+│  ├── content.md
 │  ├── implements
 │  │  ├── device_manager.md
+│  │  ├── driver.md
 │  │  ├── file_system.md
+│  │  ├── file_system_api.md
 │  │  ├── memory_manager.md
 │  │  └── process_manager.md
 │  ├── language.md
 │  └── program_struct.md
-├── LICENSE # MIT许可
+├── LICENSE
+├── log
 ├── Makefile
-├── os # Super态
-│  ├── Cargo.lock # cargo 依赖管理（自动生成）
-│  ├── Cargo.toml # cargo 配置文件
+├── os
+│  ├── Cargo.lock
+│  ├── Cargo.toml
 │  ├── Makefile
 │  └── src
 │     ├── allocation
 │     │  └── mod.rs
-│     ├── boards # 板卡相关信息
+│     ├── boards
 │     │  ├── mod.rs
 │     │  └── qemu.rs
 │     ├── config.rs
@@ -37,23 +41,23 @@ neuqOS
 │     │  ├── mod.rs
 │     │  └── virt
 │     │     └── mod.rs
-│     ├── fat32 # FAT32 文件系统
+│     ├── fat32
 │     │  ├── mod.rs
 │     │  └── virt.rs
-│     ├── fs # 文件系统
+│     ├── fs
 │     │  ├── inode.rs
 │     │  └── mod.rs
 │     ├── lang_items.rs
 │     ├── linker-qemu.ld
 │     ├── logging.rs
 │     ├── main.rs
-│     ├── mm # MMU
+│     ├── mm
 │     │  ├── address.rs
 │     │  ├── frame.rs
 │     │  ├── heap.rs
 │     │  ├── mod.rs
 │     │  └── page.rs
-│     ├── sbi # sbi文件
+│     ├── sbi
 │     │  ├── console.rs
 │     │  ├── mod.rs
 │     │  ├── qemu.rs
@@ -63,7 +67,7 @@ neuqOS
 │     ├── sync
 │     │  ├── mod.rs
 │     │  └── up.rs
-│     ├── syscall # 系统调用
+│     ├── syscall
 │     │  ├── fs.rs
 │     │  ├── mod.rs
 │     │  ├── process.rs
@@ -77,19 +81,20 @@ neuqOS
 │     │  ├── switch.S
 │     │  ├── task.rs
 │     │  └── TaskManager.rs
-│     ├── timer.rs # 计时器
-│     └── trap # 异常处理
+│     ├── timer.rs
+│     └── trap
 │        ├── context.rs
 │        ├── mod.rs
 │        └── trap.S
+├── prompt-generator.py
 ├── README.md
 ├── rust-toolchain.toml
 ├── test
-├── thirdparty # 第三方依赖
-└── user # User态
+├── thirdparty
+└── user
    ├── build.py
-   ├── Cargo.lock # cargo 依赖管理（自动生成）
-   ├── Cargo.toml # cargo 配置文件
+   ├── Cargo.lock
+   ├── Cargo.toml
    ├── Makefile
    └── src
       ├── bin
@@ -101,5 +106,5 @@ neuqOS
       ├── lang_items.rs
       ├── lib.rs
       ├── linker-qemu.ld
-      └── syscall.rs # 系统调用
+      └── syscall.rs
 ```
