@@ -7,7 +7,7 @@ const EXIT_FAILURE_FLAG: u32 = 0x3333;
 const EXIT_FAILURE: u32 = exit_code_encode(1); // Equals `exit(1)`. qemu failed exit
 const EXIT_RESET: u32 = 0x7777; // qemu reset
 
-pub trait QEMUExit {
+pub trait IQEMUExit {
     /// Exit with specified return code.
     ///
     /// Note: For `X86`, code is binary-OR'ed with `0x1` inside QEMU.
@@ -40,7 +40,7 @@ impl RISCV64 {
     }
 }
 
-impl QEMUExit for RISCV64 {
+impl IQEMUExit for RISCV64 {
     /// Exit qemu with specified exit code.
     fn exit(&self, code: u32) -> ! {
         // If code is not a special value, we need to encode it with EXIT_FAILURE_FLAG.
