@@ -161,9 +161,15 @@ pub fn sys_exec(pathname: *const u8, _argv: *const *const u8, _envp: *const *con
         },
     };
 
+    let pathname = if pathname.starts_with('/') {
+        &pathname[1..]
+    } else {
+        &pathname
+    };
+
     info!("Exec: {}", pathname);
 
-    let read = get_fs().root_dir().read_file_as_buf(&pathname);
+    let read = get_fs().root_dir().read_file_as_buf(pathname);
 
     let elf_bytes = match read {
         Some(buf) => buf,

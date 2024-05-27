@@ -25,6 +25,8 @@ const SYSCALL_PIPE: usize = 59;
 const SYSCALL_FSTAT: usize = 80;
 const SYSCALL_UNLINKAT: usize = 35;
 const SYSCALL_GETDENTS: usize = 61;
+const FREEDOM_DIVE: usize = 222;
+const SYSCALL_MUNMAP: usize = 215;
 
 mod fs;
 mod process;
@@ -38,7 +40,7 @@ use system::*;
 
 use crate::timer::TimeVal;
 
-pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
     debug!("Syscall received, id: {}", syscall_id);
 
     let ret = match syscall_id {
@@ -68,6 +70,8 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_FSTAT => sys_fstat(args[0] as usize, args[1] as *mut u8),
         SYSCALL_UNLINKAT => sys_unlinkat(args[0] as isize, args[1] as *const u8, args[2] as u32),
         SYSCALL_GETDENTS => sys_getdents(args[0] as isize, args[1] as *mut u8, args[2]),
+        FREEDOM_DIVE => sys_mmap(args[4] as isize),
+        SYSCALL_MUNMAP => sys_munmap(args[0]),
         _ => {
             warn!("Unsupported syscall: {}, kernel killed it.", syscall_id);
             sys_exit(-1);

@@ -30,11 +30,20 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
         },
         _ => {
             let fd = fd as isize;
+            let task = current_task().unwrap();
+
+            // Apply workaround for mmap
+            {
+                let mut inner = task.exclusive_inner();
+                info!("Apply workaround for mmap in sys_write!");
+                if fd >= 0 && fd < inner.fd_table.len() as isize {
+                    inner.mmap_workaround.push((fd as usize, buf as usize));
+                }
+            }
 
             // handle dup fd
-            let task = current_task().unwrap();
             let inner = task.shared_inner();
-
+            
             if inner.fd_table.get(fd as usize).is_none() {
                 for dups in inner.dup_fds.iter() {
                     if dups.1 == fd as isize {
@@ -44,6 +53,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 
                 warn!("Unsupported fd in sys_write!, fd={}", fd);
             }
+
 
             let fd_entry = inner.fd_table[fd as usize].as_ref();
             if fd_entry.is_none() {
@@ -61,19 +71,25 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 
             match file {
                 Some(FileType::File) => {
-                    let buf = unsafe {content.as_bytes_mut()};
-                    match get_fs().root_dir().get_file(&fd_entry.path).unwrap().as_file().write_all(buf) {
+                    let buf = unsafe { content.as_bytes_mut() };
+                    match get_fs()
+                        .root_dir()
+                        .get_file(&fd_entry.path)
+                        .unwrap()
+                        .as_file()
+                        .write_all(buf)
+                    {
                         Ok(_) => return len as isize,
                         Err(_) => {
                             info!("Dummy implementation for sys_write, write failed");
                             return 0;
-                        },
+                        }
                     }
                 }
                 _ => {
                     info!("Dummy implementation for sys_write, file not exist");
                     return 0;
-                },
+                }
             }
         }
     }
@@ -458,4 +474,26 @@ pub fn sys_getdents(fd: isize, p_dent: *mut u8, len: usize) -> isize {
     // PageTable::copy_to_space(token, files.as_ptr(), (p_dent as usize - 2) as *mut u8, files.len());
 
     fd
+}
+
+pub fn sys_mmap(fd: isize) -> isize {
+    let task = current_task().unwrap();
+    let inner = task.shared_inner();
+
+    for &(mapped_fd, ptr) in inner.mmap_workaround.iter() {
+        if mapped_fd == fd as usize {
+            return ptr as isize;
+        }
+    }
+
+    -1
+}
+
+pub fn sys_munmap(start: usize) -> isize {
+    let task = current_task().unwrap();
+    let mut inner = task.exclusive_inner();
+
+    inner.mmap_workaround.retain(|&(_, ptr)| ptr != start);
+
+    0
 }

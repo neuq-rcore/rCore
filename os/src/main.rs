@@ -43,8 +43,10 @@ mod trap;
 #[no_mangle]
 fn main() {
     let test_cases = vec![
-        "dup", // Don't know why this test is easily left out, so we put it in the first place
         "execve",
+        "mmap", // Not implemented
+        "munmap", // Not implemented
+        "dup", // Don't know why this test is easily left out, so we put it in the first place
         "brk",
         "chdir",
         "clone",
@@ -59,9 +61,7 @@ fn main() {
         "getppid",
         "gettimeofday",
         "mkdir_",
-        // "mmap", // Not implemented
         "mount",
-        // "munmap", // Not implemented
         "open",
         "openat",
         "read",

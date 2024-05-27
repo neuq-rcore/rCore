@@ -42,6 +42,7 @@ pub struct TaskControlBlockInner {
     pub heap_pos: usize,
     pub dup_fds: [(isize, isize); 10],
     pub fd_table: Vec<Option<FileDescriptor>>,
+    pub mmap_workaround: Vec<(usize, usize)> // fd, ptr
 }
 
 impl Drop for TaskControlBlock {
@@ -147,6 +148,7 @@ impl TaskControlBlock {
                 Some(FileDescriptor::open_stdout()),
                 Some(FileDescriptor::open_stderr()),
             ],
+            mmap_workaround: Vec::new(),
         };
 
         let kernel_token = kernel_token();
@@ -225,6 +227,7 @@ impl TaskControlBlock {
             heap_pos: 0,
             dup_fds: parent_inner.dup_fds.clone(),
             fd_table: parent_inner.fd_table.clone(),
+            mmap_workaround: parent_inner.mmap_workaround.clone(),
         });
 
         let child_control_block = Arc::new(TaskControlBlock {

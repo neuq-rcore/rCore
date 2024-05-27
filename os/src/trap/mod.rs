@@ -59,7 +59,7 @@ pub fn trap_handler() -> ! {
         match scause.cause() {
             Trap::Exception(Exception::UserEnvCall) => {
                 ctx.sepc += 4;
-                let result = syscall(ctx.x[17], [ctx.x[10], ctx.x[11], ctx.x[12]]) as usize;
+                let result = syscall(ctx.x[17], [ctx.x[10], ctx.x[11], ctx.x[12], ctx.x[13], ctx.x[14], ctx.x[15]]) as usize;
                 ctx = current_trap_ctx();
                 ctx.x[10] = result;
             }
