@@ -7,6 +7,7 @@ use alloc::sync::Weak;
 use alloc::vec::Vec;
 use log::info;
 
+use crate::fs::inode::FileDescriptor;
 use crate::mm::address::VirtAddr;
 
 use crate::sync::UPSafeCell;
@@ -39,7 +40,8 @@ pub struct TaskControlBlockInner {
     pub exit_code: i32,
     pub cwd: String,
     pub heap_pos: usize,
-    pub dup_fds: [(isize, isize); 10]
+    pub dup_fds: [(isize, isize); 10],
+    pub fd_table: Vec<Option<FileDescriptor>>,
 }
 
 impl Drop for TaskControlBlock {
@@ -139,7 +141,12 @@ impl TaskControlBlock {
             exit_code: 0,
             cwd: String::from("/"),
             heap_pos: 0,
-            dup_fds: [(-1, -1); 10]
+            dup_fds: [(-100, -100); 10],
+            fd_table: vec![
+                Some(FileDescriptor::open_stdin()),
+                Some(FileDescriptor::open_stdout()),
+                Some(FileDescriptor::open_stderr()),
+            ],
         };
 
         let kernel_token = kernel_token();
@@ -216,7 +223,8 @@ impl TaskControlBlock {
             exit_code: 0,
             cwd: parent_inner.cwd.clone(),
             heap_pos: 0,
-            dup_fds: parent_inner.dup_fds.clone()
+            dup_fds: parent_inner.dup_fds.clone(),
+            fd_table: parent_inner.fd_table.clone(),
         });
 
         let child_control_block = Arc::new(TaskControlBlock {

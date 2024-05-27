@@ -148,11 +148,7 @@ pub fn sys_clone(flags: usize, sp: usize, ptid: usize) -> isize {
 }
 
 #[no_mangle]
-pub fn sys_exec(
-    pathname: *const u8,
-    _argv: *const *const u8,
-    _envp: *const *const u8,
-) -> isize {
+pub fn sys_exec(pathname: *const u8, _argv: *const *const u8, _envp: *const *const u8) -> isize {
     let task = current_task().unwrap();
     let token = current_user_token();
     let cwd = task.shared_inner().cwd.clone();
@@ -315,14 +311,14 @@ pub fn sys_dup2(old_fd: isize, new_fd: isize) -> isize {
     let mut inner = task.exclusive_inner();
 
     for dups in inner.dup_fds.iter_mut() {
-        if new_fd != -1 && dups.0 == -1 {
+        if new_fd != -100 && dups.0 == -100 {
             dups.0 = old_fd;
             dups.1 = new_fd;
 
             return new_fd;
-        } else if new_fd == -1 && dups.0 == old_fd {
-            dups.0 = -1;
-            dups.1 = -1;
+        } else if new_fd == -100 && dups.0 == old_fd {
+            dups.0 = -100;
+            dups.1 = -100;
 
             return new_fd;
         }
@@ -340,5 +336,21 @@ pub fn sys_chdir(path: *const u8) -> isize {
 
     inner.cwd = path;
 
+    0
+}
+
+pub fn sys_pipe(fd: *mut (i32, i32)) -> isize {
+    const STDOUT: i32 = 1;
+    let fds = (STDOUT, STDOUT);
+
+    let task = current_task().unwrap();
+    let token = task.token();
+
+    PageTable::copy_to_space(
+        token,
+        &fds as *const _ as *const u8,
+        fd as *mut u8,
+        core::mem::size_of::<(i32, i32)>(),
+    );
     0
 }
