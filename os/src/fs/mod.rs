@@ -2,6 +2,9 @@ use crate::{allocation::RefOrValue, fat32::{Fat32FileSystem, Fat32IO}};
 use alloc::{string::String, sync::Arc, vec::Vec};
 use fatfs::{Dir, File, FileSystem, LossyOemCpConverter, NullTimeProvider, Read};
 use lazy_static::lazy_static;
+use log::info;
+
+use self::inode::FileType;
 
 pub type FatfsDir<'a> = Dir<'a, Fat32IO, NullTimeProvider, LossyOemCpConverter>;
 pub type FatfsFile<'a> = File<'a, Fat32IO, NullTimeProvider, LossyOemCpConverter>;
@@ -28,6 +31,10 @@ impl RootFs {
     pub fn new(device_id: usize) -> Self {
         let fs = Arc::new(Fat32FileSystem::new(device_id));
         Self { fs }
+    }
+
+    pub fn fs(&self) -> Arc<FileSystem<Fat32IO>> {
+        self.fs.clone()
     }
 
     pub fn root_dir(&self) -> Fat32Dir {
@@ -189,6 +196,19 @@ impl<'a> Fat32Dir<'a> {
     }
 
     pub fn get_dir(&self, path: &str) -> Option<Self> {
+        let path = if path.starts_with('.') && path.len() > 2 {
+            &path[2..]
+        } else if path.starts_with('/') {
+               &path[1..]
+        } else {
+            path
+        };
+
+        // Must be started with "../""
+        if path.starts_with('/') {
+            return None;
+        }
+
         let mut paths = path.split('/').into_iter();
         let mut next_path = paths.next();
         let mut cwd = RefOrValue::from_ref(self);
@@ -212,11 +232,18 @@ impl<'a> Fat32Dir<'a> {
     }
 
     pub fn get_file(&self, path: &str) -> Option<Fat32File> {
-        let path = if path.starts_with('/') {
-            &path[1..]
+        let path = if path.starts_with('.') && path.len() > 2 {
+            &path[2..]
+        } else if path.starts_with('/') {
+               &path[1..]
         } else {
             path
         };
+
+        // Must be started with "../""
+        if path.starts_with('/') {
+            return None;
+        }
 
         let mut paths = path.split('/').into_iter();
         let mut next_path = paths.next();
@@ -257,6 +284,29 @@ impl<'a> Fat32Dir<'a> {
                 file.as_file().read_exact(slice).ok().map(|_| buf)
             }
         }
+    }
+
+    // determine if the path is a file or a directory or doesn't exist
+    pub fn probe_path(&self, path: &str) -> Option<FileType> {
+        info!("Probing path: {}", path);
+        if path == "." {
+            return Some(FileType::Dir);
+        } else if self.get_file(path).is_some() {
+            Some(FileType::File)
+        } else if self.get_dir(path).is_some() {
+            Some(FileType::Dir)
+        } else {
+            None
+        }
+    }
+
+    pub fn all_entries(&self) -> Vec<FatfsEntry> {
+        self.as_dir()
+            .iter()
+            .map(|e| e.ok())
+            .filter(|e| e.is_some())
+            .map(|e| e.unwrap())
+            .collect()
     }
 }
 

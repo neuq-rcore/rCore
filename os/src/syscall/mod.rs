@@ -18,8 +18,15 @@ const SYSCALL_DUP: usize = 23;
 const SYSCALL_DUP2: usize = 24;
 const SYSCALL_CHDIR: usize = 49;
 const SYSCALL_MKDIR: usize = 34;
-const SYSCALL_OPEN: usize = 56;
+const SYSCALL_OPENAT: usize = 56;
 const SYSCALL_CLOSE: usize = 57;
+const SYSCALL_READ: usize = 63;
+const SYSCALL_PIPE: usize = 59;
+const SYSCALL_FSTAT: usize = 80;
+const SYSCALL_UNLINKAT: usize = 35;
+const SYSCALL_GETDENTS: usize = 61;
+const FREEDOM_DIVE: usize = 222;
+const SYSCALL_MUNMAP: usize = 215;
 
 mod fs;
 mod process;
@@ -33,7 +40,7 @@ use system::*;
 
 use crate::timer::TimeVal;
 
-pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+pub fn syscall(syscall_id: usize, args: [usize; 6]) -> isize {
     debug!("Syscall received, id: {}", syscall_id);
 
     let ret = match syscall_id {
@@ -55,7 +62,16 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_DUP => 0,
         SYSCALL_DUP2 => sys_dup2(args[0] as isize, args[1] as isize),
         SYSCALL_CHDIR => sys_chdir(args[0] as *const u8),
-        SYSCALL_MKDIR => 0,
+        SYSCALL_MKDIR => sys_mkdirat(args[0] as isize, args[1] as *const u8, args[2] as u32),
+        SYSCALL_OPENAT => sys_openat(args[0] as isize, args[1] as *const u8, args[2] as u32),
+        SYSCALL_CLOSE => sys_close(args[0] as usize),
+        SYSCALL_READ => sys_read(args[0] as usize, args[1] as *mut u8, args[2]),
+        SYSCALL_PIPE => sys_pipe(args[0] as *mut (i32, i32)),
+        SYSCALL_FSTAT => sys_fstat(args[0] as usize, args[1] as *mut u8),
+        SYSCALL_UNLINKAT => sys_unlinkat(args[0] as isize, args[1] as *const u8, args[2] as u32),
+        SYSCALL_GETDENTS => sys_getdents(args[0] as isize, args[1] as *mut u8, args[2]),
+        FREEDOM_DIVE => sys_mmap(args[4] as isize),
+        SYSCALL_MUNMAP => sys_munmap(args[0]),
         _ => {
             warn!("Unsupported syscall: {}, kernel killed it.", syscall_id);
             sys_exit(-1);
