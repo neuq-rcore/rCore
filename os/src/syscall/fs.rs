@@ -1,6 +1,7 @@
 use alloc::slice;
 use alloc::string::String;
 use alloc::string::ToString;
+use fatfs::Write;
 use log::info;
 use log::warn;
 
@@ -44,9 +45,36 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
                 warn!("Unsupported fd in sys_write!, fd={}", fd);
             }
 
-            // Dummy implementation
+            let fd_entry = inner.fd_table[fd as usize].as_ref();
+            if fd_entry.is_none() {
+                info!("Dummy implementation for sys_write, fd_entry is none");
+                return 0;
+            }
 
-            0
+            let fd_entry = fd_entry.unwrap();
+
+            let token = task.token();
+
+            let mut content = PageTable::translate_string(token, buf, len);
+
+            let file = get_fs().root_dir().probe_path(&fd_entry.path);
+
+            match file {
+                Some(FileType::File) => {
+                    let buf = unsafe {content.as_bytes_mut()};
+                    match get_fs().root_dir().get_file(&fd_entry.path).unwrap().as_file().write_all(buf) {
+                        Ok(_) => return len as isize,
+                        Err(_) => {
+                            info!("Dummy implementation for sys_write, write failed");
+                            return 0;
+                        },
+                    }
+                }
+                _ => {
+                    info!("Dummy implementation for sys_write, file not exist");
+                    return 0;
+                },
+            }
         }
     }
 }
