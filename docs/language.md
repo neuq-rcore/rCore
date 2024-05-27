@@ -1,4 +1,4 @@
-# Program Language
+# 编程语言
 
 ## Rust
 
@@ -16,13 +16,13 @@
 
 尽管C语言是广泛用于操作系统开发的传统语言，但Rust也是一种功能强大、性能高、易于维护的编程语言，适用于开发操作系统内核。
 
-## Toolchains
+## 工具链
 
 - `rustc 1.77.0-nightly` (bf3c6c5be 2024-02-01)
 
 - `cargo 1.77.0-nightly` (7bb7b5395 2024-01-20)
 
-## Build Dependencies
+## 依赖
 
 - `riscv64-elf-gcc`
 
@@ -32,6 +32,6 @@
 
 - `llvm-tools-preview`
 
-Refer to [`rust-toolchain.toml`](../rust-toolchain.toml)
+请参考 [`rust-toolchain.toml`](../rust-toolchain.toml) 。
 
-For command line instructions, refer to [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
+对于命令行说明，请参考 [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) 。
