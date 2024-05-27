@@ -1,5 +1,5 @@
 use core::mem::forget;
-use log:error;
+use log::error;
 
 use virtio_drivers::Hal;
 
