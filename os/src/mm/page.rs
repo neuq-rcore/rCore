@@ -239,8 +239,8 @@ impl PageTable {
         copied_bytes
     }
 
-    pub fn from_token(stap: usize) -> Self {
-        let root_ppn = PhysPageNum(stap & ((1 << 44) - 1));
+    pub fn from_token(satp: usize) -> Self {
+        let root_ppn = PhysPageNum(satp & ((1 << 44) - 1));
         Self {
             root_ppn,
             frames: Vec::new(),

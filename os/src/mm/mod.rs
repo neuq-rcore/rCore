@@ -481,7 +481,8 @@ impl UserSpace {
 
         (
             user_space,
-            user_stack_top - 1024,
+            // reserve 8 bits for a register
+            user_stack_top - 8,
             elf.header.pt2.entry_point() as usize,
         )
     }
