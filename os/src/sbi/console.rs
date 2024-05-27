@@ -1,5 +1,5 @@
 // Begin Region - Console
-pub trait Console {
+pub trait IConsole {
     fn init(&mut self);
 
     fn getchar(&self) -> u8;
@@ -20,7 +20,7 @@ pub trait Console {
     }
 }
 
-impl core::fmt::Write for dyn Console {
+impl core::fmt::Write for dyn IConsole {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
         self.write_str(s)
     }
@@ -42,7 +42,7 @@ impl LegacyConsole {
     }
 }
 
-impl Console for LegacyConsole {
+impl IConsole for LegacyConsole {
     fn init(&mut self) {}
 
     #[allow(deprecated)]
@@ -58,7 +58,7 @@ impl Console for LegacyConsole {
 
 impl core::fmt::Write for LegacyConsole {
     fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        Console::write_str(self, s)
+        IConsole::write_str(self, s)
     }
 }
 
@@ -74,7 +74,7 @@ pub struct DebugConsole;
 
 static mut IS_DBCN_AVALIABLE: Option<bool> = None;
 
-impl Console for DebugConsole {
+impl IConsole for DebugConsole {
     fn init(&mut self) {
         if !Self::is_avaliable() {
             panic!("Debug Console Extension is not avaliable. Please update your SBI to specification v2.0 and ensure DBCN is enabled");

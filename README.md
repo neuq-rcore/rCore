@@ -4,7 +4,7 @@
 
 ## 所有文档
 
-请查看 [文档总目录](docs/content.md)
+请查看 [文档总目录](docs/content.md) 。
 
 ---
 
