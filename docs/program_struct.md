@@ -22,7 +22,7 @@ neuqOS
 │  └── program_struct.md
 ├── LICENSE # MIT许可
 ├── Makefile
-├── os # S 级
+├── os # Super态
 │  ├── Cargo.lock # cargo 依赖管理（自动生成）
 │  ├── Cargo.toml # cargo 配置文件
 │  ├── Makefile
@@ -53,7 +53,7 @@ neuqOS
 │     │  ├── heap.rs
 │     │  ├── mod.rs
 │     │  └── page.rs
-│     ├── sbi
+│     ├── sbi # sbi文件
 │     │  ├── console.rs
 │     │  ├── mod.rs
 │     │  ├── qemu.rs
@@ -78,7 +78,7 @@ neuqOS
 │     │  ├── task.rs
 │     │  └── TaskManager.rs
 │     ├── timer.rs # 计时器
-│     └── trap
+│     └── trap # 异常处理
 │        ├── context.rs
 │        ├── mod.rs
 │        └── trap.S
@@ -86,7 +86,7 @@ neuqOS
 ├── rust-toolchain.toml
 ├── test
 ├── thirdparty # 第三方依赖
-└── user # U 级
+└── user # User态
    ├── build.py
    ├── Cargo.lock # cargo 依赖管理（自动生成）
    ├── Cargo.toml # cargo 配置文件
