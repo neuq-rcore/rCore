@@ -4,32 +4,10 @@
 
 ## 相关模块
 
-- `fs`: 文件系统入口的包装
-  - `inode`: 文件索引，包括对文件和文件夹的管理
+- `fs`: 文件系统入口的包装，和文件夹和文件的结构体的包装
+  - `inode`: 文件索引，管理文件的权限
 
 ## 模块 `fs`
-
-`Rootfs` 结构体的函数如下：
-
-- **new(raw_fs: FileSystem<Fat32IO>)**: 用来创建自身实例，在同模块中的懒静态引用使用：
-
-```rust
-lazy_static! {
-    pub static ref ROOT_FS: RootFs = {
-        let fs = Fat32FileSystem::new(0);
-        debug!("Filesystem initialized.");
-        RootFs::new(fs)
-    };
-}
-```
-
-单例模式的设计使得全局只存在一个 RootFs 实例。
-
-- **root_dir(&'static self)**: 用来获取根目录，是后续读取文件的基础。
-
-## 子模块 `inode`
-
-### 自定义类型
 
 为了增加可读性，本模块自定义了三种类型，后续不再解释：
 
@@ -39,7 +17,25 @@ pub type FatfsFile<'a> = File<'a, Fat32IO, NullTimeProvider, LossyOemCpConverter
 pub type FatfsEntry<'a> = fatfs::DirEntry<'a, Fat32IO, NullTimeProvider, LossyOemCpConverter>;
 ```
 
-主要内容是两个 `Fat32File` 和 `Fat32Dir` 结构体：
+`Rootfs` 结构体是对 `sdcard.img` 的抽象，函数如下：
+
+- **new(raw_fs: FileSystem<Fat32IO>)**: 用来创建自身实例，在同模块中的懒静态引用使用：
+
+```rust
+lazy_static! {
+    pub static ref ROOT_FS: Arc<RootFs> = Arc::new(RootFs::new(0));
+}
+
+pub fn get_fs() -> Arc<RootFs> {
+    ROOT_FS.clone()
+}
+```
+
+单例模式的设计使得全局只存在一个 RootFs 实例，通过 `get_fs` 函数获得，保证多线程并发时的安全。
+
+- **root_dir(&'static self)**: 用来获取根目录，是后续读取文件的基础。
+
+`Fat32File` 和 `Fat32Dir` 这两个结构体分别是文件和目录的抽象。
 
 - `Fat32File` 是对 `FatfsEntry` 的包装，原生的函数如下：
 
@@ -49,38 +45,34 @@ pub type FatfsEntry<'a> = fatfs::DirEntry<'a, Fat32IO, NullTimeProvider, LossyOe
 
   - **name(&self)**: 获取文件名。
 
-  - **inner(&self)**: 获取 `FatfsEntry` 类型转换为 `FatfsFile` 的结果，用于更加底层的行为。
+  - **as_file(&self)**: 将自身类型转换为 `FatfsFile` 并返回。
+
+  - **as_entry(&self)**: 将自身类型转换为 `FatfsEntry` 并返回。
 
 - `Fat32Dir` 是对枚举类型 `Fat32DirInner` 的包装，其定义如下：
 
 ```rust
 enum Fat32DirInner<'a> {
-    Root(FatfsDir<'a>),
-    Sub(FatfsEntry<'a>),
+    Root(FatfsDir<'a>), // 根目录
+    Sub(FatfsEntry<'a>), // 除根目录以外的目录或文件
 }
 ```
 
-- `Fat32DirInner` 的函数如下：
-
-  - **from_root(root: FatfsDir<'a>)**: 从 `Fat32Dir` 构造对象。
-
-  - **from_entry(entry: FatfsEntry<'a>)**: 从 `FatfsEntry` 构造对象。
-
-  - **as_dir(&self)**: 返回转换为 `FatfsDir` 的结果。
+根目录是 `'/'` ，没有文件名，所以要单独分离。
 
 - `Fat32Dir` 的函数如下：
 
   - **from_root(root: FatfsDir<'a>)**: 从 `Fat32Dir` 构造对象。
 
-  - **from_entry(entry: FatfsEntry<'a>)**: 从 `Fat32Entry` 构造对象。
+  - **from_entry(entry: FatfsEntry<'a>)**: 从 `FatfsEntry` 构造对象。
 
-  - **inner(&self)**: 获取 `Fat32DirInner` 类型转换为 `FatfsDir` 的结果。
+  - **as_dir(&self)**: 将自身类型转换为 `FatfsDir` 并返回。
 
-  - **name(&self)**: 获取文件名，如果是根目录则为 **None** 。
+  - **as_entry(&self)**: 将自身类型转换为 `FatfsEntry` 并返回。
 
-  - **match_dir(&self, name: &str)**: 私有函数，根据名字查找子目录。
+  - **name(&self)**: 获取文件名，如果是根目录则为空。
 
-  - **match_file(&self, name: &str)**: 私有函数，根据名字查找子文件。
+  - **get_parent_dir(&self, path: &str)**: 获取父目录。
 
   - **get_dir(&self, path: &str)**: 根据路径查找目录。
 
@@ -93,8 +85,8 @@ enum Fat32DirInner<'a> {
 在实际使用环境中，通过如下代码执行一个程序：
 
 ```rust
-let path = "path/to/your_program"
-let buf = ROOT_FS.root_dir().read_file_as_buf(path);
+let path = "/path/to/your_program"
+let buf = get_fs().root_dir().read_file_as_buf(path);
 
 match buf {
   Some(buf) => {
