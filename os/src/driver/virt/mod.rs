@@ -8,7 +8,7 @@ use crate::mm::{
     PhysAddr, VirtAddr
 };
 
-use crate::mm::memory_set::KERNEL_SPACE;
+use crate::mm::KERNEL_SPACE;
 
 use core::ptr::NonNull;
 pub const VIRTIO0: usize = 0x1000_1000;
@@ -48,7 +48,7 @@ unsafe impl Hal for VirtioHal {
         paddr: virtio_drivers::PhysAddr,
         _size: usize,
     ) -> core::ptr::NonNull<u8> {
-        /error!("mmio_pa2va: {:#08x}", paddr);
+        error!("mmio_pa2va: {:#08x}", paddr);
         // we use identity mapping
         NonNull::new((usize::from(paddr)) as *mut u8).unwrap()
     }
