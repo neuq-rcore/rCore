@@ -2,10 +2,10 @@ use core::mem::forget;
 
 use virtio_drivers::Hal;
 
-use crate::mm::{
+use crate::{config::MEMORY_END, mm::{
     frame::{frame_alloc_contiguous, frame_dealloc_contiguous},
-    PhysAddr,
-};
+    PhysAddr, KERNEL_SPACE,
+}};
 
 use core::ptr::NonNull;
 pub const VIRTIO0: usize = 0x1000_1000;
@@ -46,6 +46,8 @@ unsafe impl Hal for VirtioHal {
         _size: usize,
     ) -> core::ptr::NonNull<u8> {
         // we use identity mapping
+        // Don't map to framed memory, use identity mapping
+        // as the kernel is able to access all memory
         NonNull::new((usize::from(paddr)) as *mut u8).unwrap()
     }
 
@@ -53,7 +55,20 @@ unsafe impl Hal for VirtioHal {
         buffer: core::ptr::NonNull<[u8]>,
         _direction: virtio_drivers::BufferDirection,
     ) -> virtio_drivers::PhysAddr {
-        buffer.as_ptr() as *mut u8 as usize
+        let va = buffer.as_ptr() as *mut u8 as usize;
+
+        match va {
+            0..=MEMORY_END => va, // fast path for identity mapping
+            _ => {
+                let pa = KERNEL_SPACE.shared_access().table().translate_va(va.into());
+                match pa {
+                    Some(pa) => pa.into(),
+                    None => {
+                        panic!("share: invalid address");
+                    }
+                }
+            }
+        }
     }
 
     unsafe fn unshare(

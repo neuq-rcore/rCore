@@ -62,7 +62,7 @@ fn main() {
     // ];
 
     let test_cases = vec![
-        // "execve", // FIXME
+        "execve",
         "brk",
         "chdir",
         "clone",
