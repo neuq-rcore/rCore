@@ -1,5 +1,5 @@
 pub const USER_STACK_SIZE: usize = 8192;
-pub const KERNEL_STACK_SIZE: usize = 8192;
+pub const KERNEL_STACK_SIZE: usize = 0x0008_0000; // 512KB
 
 pub const KERNEL_HEAP_SIZE: usize = 0x0080_0000; // 8MB
 
