@@ -170,18 +170,16 @@ pub fn sys_exec(
     // // let buf = [100; 1024];
     // print!("{:?}", buf);
 
-    let root_dir = get_fs().clone();
+    let read = get_fs().root_dir().read_file_as_buf(&pathname);
+    let elf_bytes = match read {
+        Some(buf) => buf,
+        None => {
+            warn!("Failed to read file: {}", pathname);
+            return -1;
+        }
+    };
 
-    root_dir.root_dir().inner().open_file("test_echo").unwrap();
-    // let elf_bytes = match read {
-    //     Some(buf) => buf,
-    //     None => {
-    //         warn!("Failed to read file: {}", pathname);
-    //         return -1;
-    //     }
-    // };
-
-    // task.exec(&elf_bytes);
+    task.exec(&elf_bytes);
 
     // todo implement argc, argv and envp
 
