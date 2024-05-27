@@ -12,6 +12,8 @@
 
 - [内存管理器](implements/memory_manager.md)
 
+- [文件系统](implements/file_system.md)
+
 - [文件系统 API](implements/file_system_api.md)
 
 - [设备管理器](implements/device_manager.md)
