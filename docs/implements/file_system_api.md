@@ -1,6 +1,6 @@
 # 文件系统 API
 
-文件系统 API 模块为使用者管理和操作文件系统树（File System Tree）提供了方便的 API 接口。
+文件系统 API 为使用者管理和操作文件系统树（File System Tree）提供了方便的 API 接口。
 
 ## 相关模块
 
