@@ -60,7 +60,7 @@ unsafe impl Hal for VirtioHal {
         let va = buffer.as_ptr() as *mut u8 as usize;
         let pa = KERNEL_SPACE.exclusive_access().table().translate_va(VirtAddr::from(va)).unwrap();
         error!("mmio_va2pa: {:#08x} -> {:#08x}", va, pa);
-        pa
+        pa.into()
     }
 
     unsafe fn unshare(
