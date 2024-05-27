@@ -1,4 +1,5 @@
 use core::mem::forget;
+use log:error;
 
 use virtio_drivers::Hal;
 
@@ -45,6 +46,7 @@ unsafe impl Hal for VirtioHal {
         paddr: virtio_drivers::PhysAddr,
         _size: usize,
     ) -> core::ptr::NonNull<u8> {
+        error!("mmio_pa2va: {:#08x}", paddr);
         // we use identity mapping
         NonNull::new((usize::from(paddr)) as *mut u8).unwrap()
     }
@@ -53,7 +55,9 @@ unsafe impl Hal for VirtioHal {
         buffer: core::ptr::NonNull<[u8]>,
         _direction: virtio_drivers::BufferDirection,
     ) -> virtio_drivers::PhysAddr {
-        buffer.as_ptr() as *mut u8 as usize
+        let pa = buffer.as_ptr() as *mut u8 as usize;
+        error!("mmio_va2pa: {:#08x}", pa);
+        pa
     }
 
     unsafe fn unshare(
