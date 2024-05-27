@@ -6,17 +6,14 @@
     naked_functions,
     alloc_error_handler,
     vec_into_raw_parts,
-    custom_test_frameworks
 )]
 
 use core::{arch::asm, slice};
 
-use alloc::vec::Vec;
-use fatfs::Read;
 use log::{debug, info};
 use sbi::shutdown;
 
-use crate::{fat32::Fat32FileSystem, fs::ROOT_FS};
+use crate::fs::get_fs;
 
 #[macro_use]
 extern crate alloc;
@@ -45,27 +42,8 @@ mod trap;
 
 #[no_mangle]
 fn main() {
-    // let test_cases = vec![
-    //     "write",
-    //     "gettimeofday",
-    //     "sleep",
-    //     "getpid",
-    //     "getppid",
-    //     "uname",
-    //     "times",
-    //     "fork",
-    //     "clone",
-    //     "wait",
-    //     "waitpid",
-    //     "exit",
-    //     "mount",
-    //     "umount",
-    //     // "exec", // TODO
-    //     "yield", // FIXME
-    // ];
-
     let test_cases = vec![
-        // "execve", // FIXME
+        "execve",
         "brk",
         "chdir",
         "clone",
@@ -80,7 +58,7 @@ fn main() {
         "getpid",
         "getppid",
         "gettimeofday",
-        "mkdir",
+        "mkdir_",
         "mmap",
         "mount",
         "munmap",
@@ -100,7 +78,7 @@ fn main() {
     ];
 
     for name in test_cases.into_iter() {
-        let buf = ROOT_FS.root_dir().read_file_as_buf(name);
+        let buf = get_fs().root_dir().read_file_as_buf(name);
 
         match buf {
             Some(buf) => {

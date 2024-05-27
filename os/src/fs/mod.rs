@@ -1,33 +1,34 @@
-use fatfs::FileSystem;
-use log::debug;
-
 use crate::fat32::{Fat32FileSystem, Fat32IO};
+use alloc::sync::Arc;
+use fatfs::FileSystem;
 use lazy_static::lazy_static;
 
 use self::inode::Fat32Dir;
+
 pub mod inode;
 
 lazy_static! {
-    pub static ref ROOT_FS: RootFs = {
-        let fs = Fat32FileSystem::new(0);
-        debug!("Filesystem initialized.");
-        RootFs::new(fs)
-    };
+    pub static ref ROOT_FS: Arc<RootFs> = Arc::new(RootFs::new(0));
+}
+
+pub fn get_fs() -> Arc<RootFs> {
+    ROOT_FS.clone()
 }
 
 pub struct RootFs {
-    inner: FileSystem<Fat32IO>,
+    pub fs: Arc<FileSystem<Fat32IO>>,
 }
 
 unsafe impl Sync for RootFs {}
 unsafe impl Send for RootFs {}
 
 impl RootFs {
-    pub fn new(raw_fs: FileSystem<Fat32IO>) -> Self {
-        Self { inner: raw_fs }
+    pub fn new(device_id: usize) -> Self {
+        let fs = Arc::new(Fat32FileSystem::new(device_id));
+        Self { fs }
     }
 
-    pub fn root_dir(&'static self) -> Fat32Dir {
-        Fat32Dir::from_root(self.inner.root_dir())
+    pub fn root_dir(&self) -> Fat32Dir {
+        Fat32Dir::from_root(self.fs.root_dir())
     }
 }

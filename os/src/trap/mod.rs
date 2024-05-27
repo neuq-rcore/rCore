@@ -58,15 +58,6 @@ pub fn trap_handler() -> ! {
     
         match scause.cause() {
             Trap::Exception(Exception::UserEnvCall) => {
-                // // jump to next instruction anyway
-                // let mut cx = current_trap_cx();
-                // cx.sepc += 4;
-                // // get system call return value
-                // let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]);
-                // // cx is changed during sys_exec, so we have to call it again
-                // cx = current_trap_cx();
-                // cx.x[10] = result as usize;
-
                 ctx.sepc += 4;
                 let result = syscall(ctx.x[17], [ctx.x[10], ctx.x[11], ctx.x[12]]) as usize;
                 ctx = current_trap_ctx();

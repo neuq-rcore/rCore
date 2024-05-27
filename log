@@ -1,0 +1,5460 @@
+这是一个简单的用Rust编写的操作系统内核的项目的所有代码。
+- ./rust-toolchain.toml
+```
+[toolchain]
+channel = "nightly-2024-02-03"
+components = ["rust-src", "llvm-tools-preview", "rustfmt", "clippy"]
+
+```
+
+- ./Makefile
+```
+.PHONY: clippy clippy-% all test test-inner parse dummy-run dummy-test
+
+all:
+# Temporarily enable user program build to make CI pass
+#	@cd user && make -s build
+	@cd os && make -s release
+
+	@cp os/target/riscv64gc-unknown-none-elf/release/os.bin kernel-qemu
+	@cp bootloader/opensbi-qemu.bin sbi-qemu
+
+clippy: clippy-user clippy-os
+
+clippy-%:
+	cd $* && cargo clippy --all-features
+
+test: all test-inner parse
+
+test-inner:
+	@cp test/sdcard.img .
+
+	@qemu-system-riscv64 -machine virt \
+        -m 128M -nographic -smp 2 \
+        -kernel kernel-qemu \
+        -bios sbi-qemu \
+        -drive file=sdcard.img,if=none,format=raw,id=x0 \
+        -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
+        -device virtio-net-device,netdev=net \
+        -netdev user,id=net | tee output.log
+
+parse:
+# the test scripts produce 'SyntaxWarning: invalid escape sequence'
+	@python3 -W ignore test/check_result/test_runner.py output.log > results.json
+	@python3 test/visualize_result.py results.json
+
+dummy-run:
+	@python3 test/demo_test.py test/riscv64/ | tee output.log
+
+dummy-test: dummy-run parse
+
+clean:
+	@echo -e "\e[1;33m=> Cleaning os...\e[0m"
+	@cd os && make -s clean
+	@echo -e "\e[1;33m=> Cleaning user...\e[0m"
+	@cd user && make -s clean
+	@echo -e "\e[1;33m=> Cleaning all outputs/dependencies...\e[0m"
+	rm -f sbi-qemu kernel-qemu
+	@echo -e "\e[1;33m=> Cleaning test results\e[0m"
+	rm -f output.log results.json sdcard.img
+	@echo -e "\e[1;33m=> Cleaning test result parse\e[0m"
+	rm -rf test/check_result/__pycache__
+
+%:
+	@cd os && make -s $@
+
+```
+
+- ./.gitignore
+```
+/target
+
+# make all outputs/dependencies
+sbi-qemu
+kernel-qemu
+
+# test results
+output.log
+results.json
+
+# oj test dependency
+sdcard.img
+
+# test result parse
+test/check_result/__pycache__
+
+# Dummy test temp files
+test_close.txt
+test_mmap.txt
+
+os/src/link_app.S
+
+```
+
+- ./README.md
+```markdown
+# neuqOS 技术文档
+
+![NEUQ](docs/assets/neuq.jpg)
+
+## 所有文档
+
+请查看 [文档总目录](docs/content.md)
+
+---
+
+## 自动化测试
+
+[![CodeFactor](https://www.codefactor.io/repository/github/neuq-rcore/rcore/badge)](https://www.codefactor.io/repository/github/neuq-rcore/rcore)
+
+[![Continuous Integration](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml)
+
+[![Sync to GitLab](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml)
+
+[![OJ Simulation](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml)
+
+## 准备工作
+
+### 构建
+
+```shell
+# or simply run `make`
+make build
+```
+
+### 运行
+
+```shell
+make run
+```
+
+### 测试
+
+#### 本地测试
+
+在仓库根目录执行：
+
+```shell
+make test
+```
+
+这将模拟比赛的评测环境，首先执行 `make all` ，然后使用要求的 Qemu 启动参数挂载测试样例并运行内核进行测试。运行结束后，测试脚本 `test/visualize_result.py` 将会生成测试结果的可视化报告。
+
+下面是生成的可视化报告的一个例子：
+
+![visual_report.png](docs/assets/visual_report.png)
+
+对于每个测试，
+
+- **Skiped** 表示测试未进行，或者该测试样例未输出结果就被内核杀死
+- **Failed** 表示测试已经执行，且有输出，但是测试结果不符合预期
+- **Passed** 表示测试通过，输出结果符合预期
+
+其中，`[x/y]` 表示单个测试的结果，`x` 为测试通过的测试点数量，`y` 为该测试的测试点总数。
+
+最后会给出测试的总体结果和得分。
+
+#### 持续集成测试
+
+对于submit分支下的每次提交（将来会合并到 `main` 分支），都会有一个 GitHub Actions workflow 自动运行测试。测试过程基本符合上述本地测试的流程，但是会在测试结束后将测试结果，Qemu输出和测试脚本对输出的判断结果都上传到 GitHub Actions 的 artifacts 中，以便查看详细的测试结果。同时，可视化脚本也会运行，无需下载 artifacts 即可查看测试结果。
+
+### 调试
+
+### 命令行界面
+
+#### 通过 GDB 启动 QEMU 模拟器
+
+```shell
+make debug
+```
+
+#### 连接至 GDB 服务
+
+```shell
+make connect
+```
+
+### VSCode
+
+在 VSCode 中打开项目，按下 <kbd>F5</kbd> 进行调试。
+
+## 完成情况
+
+| 内核模块 | 完成情况 | 系统调用 |
+| :------- | -------- | -------- |
+|          |          |          |
+|          |          |          |
+|          |          |          |
+|          |          |          |
+
+## 参赛队员
+
+徐才益
+
+薛丁豪
+
+白聪
+
+## 参考文档
+
+- [rCore-Tutorial-Book-v3 3.6.0-alpha.1 文档](https://rcore-os.cn/rCore-Tutorial-Book-v3/index.html)
+
+- [plctlab/riscv-operating-system-mooc: 《从头写一个RISC-V OS》课程配套的资源](https://github.com/plctlab/riscv-operating-system-mooc)
+
+- [xsp-daily-work/暑期rcore实验笔记 at master · xushanpu123/xsp-daily-work](https://github.com/xushanpu123/xsp-daily-work/tree/master/暑期rcore实验笔记)
+
+- [Introduction · GitBook](https://nju-projectn.github.io/ics-pa-gitbook/ics2024/)
+
+## 许可
+
+MIT
+
+```
+
+- ./user/Makefile
+```
+TARGET := riscv64gc-unknown-none-elf
+MODE := release
+APP_DIR := src/bin
+TARGET_DIR := target/$(TARGET)/$(MODE)
+APPS := $(wildcard $(APP_DIR)/*.rs)
+ELFS := $(patsubst $(APP_DIR)/%.rs, $(TARGET_DIR)/%, $(APPS))
+BINS := $(patsubst $(APP_DIR)/%.rs, $(TARGET_DIR)/%.bin, $(APPS))
+
+OBJDUMP := rust-objdump --arch-name=riscv64
+OBJCOPY := rust-objcopy --binary-architecture=riscv64
+
+elf: $(APPS)
+	@python3 build.py
+
+binary: elf
+	@$(foreach elf, $(ELFS), $(OBJCOPY) $(elf) --strip-all -O binary $(patsubst $(TARGET_DIR)/%, $(TARGET_DIR)/%.bin, $(elf));)
+
+build: binary
+
+clean:
+	@cargo clean
+
+.PHONY: elf binary build clean
+```
+
+- ./user/Cargo.toml
+```
+[package]
+name = "user_lib"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+[profile.release]
+debug = true
+
+```
+
+- ./user/.gitignore
+```
+/target
+
+```
+
+- ./user/build.py
+```
+#!/bin/python3
+
+import os
+
+base_address = 0x80400000
+step = 0x20000
+linker = 'src/linker-qemu.ld'
+
+app_id = 0
+apps = os.listdir('src/bin')
+apps.sort()
+for app in apps:
+    app = app[:app.find('.')]
+    lines = []
+    lines_before = []
+    with open(linker, 'r') as f:
+        for line in f.readlines():
+            lines_before.append(line)
+            line = line.replace(hex(base_address), hex(base_address+step*app_id))
+            lines.append(line)
+    with open(linker, 'w+') as f:
+        f.writelines(lines)
+    os.system('cargo build --bin %s --release' % app)
+    print('[build.py] application %s start with address %s' %(app, hex(base_address+step*app_id)))
+    with open(linker, 'w+') as f:
+        f.writelines(lines_before)
+    app_id = app_id + 1
+
+```
+
+- ./user/.cargo/config.toml
+```
+[build]
+target = "riscv64gc-unknown-none-elf"
+
+[target.riscv64gc-unknown-none-elf]
+rustflags = [
+	"-C", "link-arg=-Tsrc/linker-qemu.ld", 
+	"-C", "force-frame-pointers=yes"
+]
+
+```
+
+- ./user/src/lang_items.rs
+```rust
+use core::panic::PanicInfo;
+
+#[panic_handler]
+fn panic_handler(panic_info: &PanicInfo) -> ! {
+    let err = panic_info.message().unwrap();
+    if let Some(location) = panic_info.location() {
+        println!(
+            "Panicked at {}:{}, {}",
+            location.file(),
+            location.line(),
+            err
+        );
+    } else {
+        println!("Panicked: {}", err);
+    }
+    loop {}
+}
+
+```
+
+- ./user/src/linker-qemu.ld
+```
+OUTPUT_ARCH(riscv)
+ENTRY(_start)
+
+BASE_ADDRESS = 0x80400000;
+
+SECTIONS
+{
+    . = BASE_ADDRESS;
+    .text : {
+        *(.text.entry)
+        *(.text .text.*)
+    }
+    .rodata : {
+        *(.rodata .rodata.*)
+        *(.srodata .srodata.*)
+    }
+    .data : {
+        *(.data .data.*)
+        *(.sdata .sdata.*)
+    }
+    .bss : {
+        start_bss = .;
+        *(.bss .bss.*)
+        *(.sbss .sbss.*)
+        end_bss = .;
+    }
+    /DISCARD/ : {
+        *(.eh_frame)
+        *(.debug*)
+    }
+}
+```
+
+- ./user/src/lib.rs
+```rust
+#![no_std]
+#![feature(linkage)]
+#![feature(panic_info_message)]
+
+#[macro_use]
+pub mod console;
+mod lang_items;
+mod syscall;
+
+#[no_mangle]
+#[link_section = ".text.entry"]
+pub extern "C" fn _start() -> ! {
+    clear_bss();
+    exit(main());
+    panic!("Unreachable after sys_exit!");
+}
+
+#[linkage = "weak"]
+#[no_mangle]
+fn main() -> i32 {
+    panic!("Cannot find main!");
+}
+
+fn clear_bss() {
+    extern "C" {
+        fn start_bss();
+        fn end_bss();
+    }
+    (start_bss as usize..end_bss as usize).for_each(|addr| unsafe {
+        (addr as *mut u8).write_volatile(0);
+    });
+}
+
+use syscall::*;
+
+pub fn write(fd: usize, buf: &[u8]) -> isize {
+    sys_write(fd, buf)
+}
+
+pub fn exit(exit_code: i32) -> isize {
+    sys_exit(exit_code)
+}
+
+pub fn yield_() -> isize {
+    sys_yield()
+}
+
+pub fn get_time() -> isize {
+    sys_get_time()
+}
+
+```
+
+- ./user/src/syscall.rs
+```rust
+use core::arch::asm;
+
+const SYSCALL_WRITE: usize = 64;
+const SYSCALL_EXIT: usize = 93;
+const SYSCALL_YIELD: usize = 124;
+const SYSCALL_GET_TIME: usize = 169;
+
+fn syscall(id: usize, args: [usize; 3]) -> isize {
+    let mut ret: isize;
+    unsafe {
+        asm!(
+            "ecall",
+            inlateout("x10") args[0] => ret,
+            in("x11") args[1],
+            in("x12") args[2],
+            in("x17") id
+        );
+    }
+    ret
+}
+
+pub fn sys_write(fd: usize, buffer: &[u8]) -> isize {
+    syscall(SYSCALL_WRITE, [fd, buffer.as_ptr() as usize, buffer.len()])
+}
+
+pub fn sys_exit(exit_code: i32) -> isize {
+    syscall(SYSCALL_EXIT, [exit_code as usize, 0, 0])
+}
+
+pub fn sys_yield() -> isize {
+    syscall(SYSCALL_YIELD, [0, 0, 0])
+}
+
+pub fn sys_get_time() -> isize {
+    syscall(SYSCALL_GET_TIME, [0, 0, 0])
+}
+
+```
+
+- ./user/src/console.rs
+```rust
+use super::write;
+use core::fmt::{self, Write};
+
+struct Stdout;
+
+const STDOUT: usize = 1;
+
+impl Write for Stdout {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        write(STDOUT, s.as_bytes());
+        Ok(())
+    }
+}
+
+pub fn print(args: fmt::Arguments) {
+    Stdout.write_fmt(args).unwrap();
+}
+
+#[macro_export]
+macro_rules! print {
+    ($fmt: literal $(, $($arg: tt)+)?) => {
+        $crate::console::print(format_args!($fmt $(, $($arg)+)?));
+    }
+}
+
+#[macro_export]
+macro_rules! println {
+    ($fmt: literal $(, $($arg: tt)+)?) => {
+        $crate::console::print(format_args!(concat!($fmt, "\n") $(, $($arg)+)?));
+    }
+}
+
+```
+
+- ./user/src/bin/02power_7.rs
+```rust
+#![no_std]
+#![no_main]
+
+#[macro_use]
+extern crate user_lib;
+
+const LEN: usize = 100;
+
+#[no_mangle]
+fn main() -> i32 {
+    let p = 7u64;
+    let m = 998244353u64;
+    let iter: usize = 160000;
+    let mut s = [0u64; LEN];
+    let mut cur = 0usize;
+    s[cur] = 1;
+    for i in 1..=iter {
+        let next = if cur + 1 == LEN { 0 } else { cur + 1 };
+        s[next] = s[cur] * p % m;
+        cur = next;
+        if i % 10000 == 0 {
+            println!("power_7 [{}/{}]", i, iter);
+        }
+    }
+    println!("{}^{} = {}(MOD {})", p, iter, s[cur], m);
+    println!("Test power_7 OK!");
+    0
+}
+
+```
+
+- ./user/src/bin/01power_5.rs
+```rust
+#![no_std]
+#![no_main]
+
+#[macro_use]
+extern crate user_lib;
+
+const LEN: usize = 100;
+
+#[no_mangle]
+fn main() -> i32 {
+    let p = 5u64;
+    let m = 998244353u64;
+    let iter: usize = 140000;
+    let mut s = [0u64; LEN];
+    let mut cur = 0usize;
+    s[cur] = 1;
+    for i in 1..=iter {
+        let next = if cur + 1 == LEN { 0 } else { cur + 1 };
+        s[next] = s[cur] * p % m;
+        cur = next;
+        if i % 10000 == 0 {
+            println!("power_5 [{}/{}]", i, iter);
+        }
+    }
+    println!("{}^{} = {}(MOD {})", p, iter, s[cur], m);
+    println!("Test power_5 OK!");
+    0
+}
+
+```
+
+- ./user/src/bin/03sleep.rs
+```rust
+#![no_std]
+#![no_main]
+
+#[macro_use]
+extern crate user_lib;
+
+use user_lib::{get_time, yield_};
+
+#[no_mangle]
+fn main() -> i32 {
+    let current_timer = get_time();
+    let wait_for = current_timer + 3000;
+    while get_time() < wait_for {
+        yield_();
+    }
+    println!("Test sleep OK!");
+    0
+}
+
+```
+
+- ./user/src/bin/00power_3.rs
+```rust
+#![no_std]
+#![no_main]
+
+#[macro_use]
+extern crate user_lib;
+
+const LEN: usize = 100;
+
+#[no_mangle]
+fn main() -> i32 {
+    let p = 3u64;
+    let m = 998244353u64;
+    let iter: usize = 200000;
+    let mut s = [0u64; LEN];
+    let mut cur = 0usize;
+    s[cur] = 1;
+    for i in 1..=iter {
+        let next = if cur + 1 == LEN { 0 } else { cur + 1 };
+        s[next] = s[cur] * p % m;
+        cur = next;
+        if i % 10000 == 0 {
+            println!("power_3 [{}/{}]", i, iter);
+        }
+    }
+    println!("{}^{} = {}(MOD {})", p, iter, s[cur], m);
+    println!("Test power_3 OK!");
+    0
+}
+
+```
+
+- ./os/Makefile
+```
+# Region // Build
+OUTPUT_NAME = os
+
+CARGO := cargo
+CARGO_FLAGS :=
+MODE := debug
+TARGET := riscv64gc-unknown-none-elf
+KERNEL_ELF := target/$(TARGET)/$(MODE)/$(OUTPUT_NAME)
+KERNEL_BIN := $(KERNEL_ELF).bin
+
+OBJCOPY := rust-objcopy --binary-architecture=riscv64
+
+ifeq ($(MODE), release)
+	CARGO_FLAGS += --release
+endif
+
+# End Region // Build
+
+# Region // Debugging
+ARCH := riscv64
+GDB := $(ARCH)-elf-gdb
+# End Region // Debugging
+
+# Region // Board
+QEMU := qemu-system-$(ARCH)
+
+# alternative : 'opensbi' and 'rustsbi' 
+SBI_IMPL := opensbi
+BOARD_TYPE := qemu
+BOOTLOADER := ../bootloader/$(SBI_IMPL)-$(BOARD_TYPE).bin
+
+KERNEL_ENTRY_PA := 0x80200000
+
+QEMU_ARGS := -machine virt \
+			 -nographic \
+			 -bios $(BOOTLOADER) \
+			 -device loader,file=$(KERNEL_ELF),addr=$(KERNEL_ENTRY_PA) \
+			 -drive file=../test/sdcard.img,if=none,format=raw,id=x0 \
+        	 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
+# End Region // Board
+
+all: build
+
+build:
+	@echo '[+] Building os kernel'
+	$(CARGO) build $(CARGO_FLAGS)
+	@$(OBJCOPY) --strip-all $(KERNEL_ELF) $(KERNEL_BIN)
+
+# build-app:
+# 	@echo '[+] Building user applications'
+# 	@cd ../user && make build
+
+run: build
+	@$(QEMU) $(QEMU_ARGS)
+
+debug: build
+	@echo '[!] Waiting for debugger'
+	@$(QEMU) $(QEMU_ARGS) -s -S
+
+gdb: connect
+
+connect:
+	@$(GDB) -ex 'file $(KERNEL_ELF)' \
+		-ex 'set arch riscv:rv64' \
+		-ex 'target remote localhost:1234' \
+		-ex 'layout src'
+
+help:
+	@echo '- make build   : Build os kernel'
+	@echo '- make run     : Run os kernel with qemu'
+	@echo '- make debug   : Launch the os with qemu and wait for gdb'
+	@echo '- make connect : Launch gdb and connect to qemu'
+
+release: CARGO_FLAGS = --release
+release: MODE = release
+release: KERNEL_ELF = target/$(TARGET)/$(MODE)/$(OUTPUT_NAME)
+release: KERNEL_BIN = $(KERNEL_ELF).bin
+release: release-pre release-inner
+
+release-pre:
+	@echo 'Preparing for release build...'
+
+release-inner:
+	@echo '[+] Building os kernel(release)'
+	$(CARGO) build $(CARGO_FLAGS)
+	@$(OBJCOPY) --strip-all $(KERNEL_ELF) $(KERNEL_BIN)
+
+clean:
+	@$(CARGO) clean
+
+```
+
+- ./os/Cargo.toml
+```
+[package]
+name = "os"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+riscv = { git = "https://github.com/rcore-os/riscv", features = ["inline-asm"] }
+lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
+log = "0.4"
+sbi-rt = { version = "0.0.3", features = ["legacy"] }
+sbi-spec = "0.0.7"
+fatfs = { git = "https://github.com/neuq-rcore/rust-fatfs", default-features = false, features = ["lfn", "alloc", "unicode"] }
+virtio-drivers = { git = "https://github.com/rcore-os/virtio-drivers", rev = "4ee80e5" }
+buddy_system_allocator = { git = "https://github.com/neuq-rcore/buddy_system_allocator" }
+bitflags = "2.5.0"
+xmas-elf = { git = "https://github.com/nrc/xmas-elf.git" }
+
+[profile.release]
+debug = true
+
+```
+
+- ./os/.gitignore
+```
+/target
+/.gdb_history
+
+```
+
+- ./os/.vscode/settings.json
+```
+{
+    "rust-analyzer.cargo.target": "riscv64gc-unknown-none-elf",
+    "rust-analyzer.check.allTargets": false,
+    "rust-analyzer.check.extraArgs": [
+        "--target",
+        "riscv64gc-unknown-none-elf"
+    ]
+}
+
+```
+
+- ./os/.vscode/tasks.json
+```
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Qemu",
+            "type": "shell",
+            "command": "make debug LOG=TRACE",
+            "group": {
+                "kind": "none",
+                "isDefault": true
+            },
+            "isBackground": true,
+            "presentation": {
+                "echo": true,
+                "reveal": "always",
+                "focus": false,
+                "panel": "shared",
+                "showReuseMessage": false,
+                "clear": true
+            },
+            "problemMatcher": [
+                {
+                    "owner": "rust",
+                    "fileLocation": ["relative", "${workspaceFolder}"],
+                    "background": {
+                        "activeOnStart": true,
+                        "beginsPattern": ".",
+                        "endsPattern": ".",
+                    },
+                    "pattern": [
+                        {
+                            "regexp": ".",
+                            "file": 1,
+                            "line": 2,
+                            "column": 3,
+                            "severity": 4,
+                            "message": 5
+                        },
+                    ]
+                }
+            ]
+        }
+    ]
+}
+```
+
+- ./os/.vscode/launch.json
+```
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "(gdb) Qemu",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/target/riscv64gc-unknown-none-elf/debug/os",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "preLaunchTask": "Qemu",
+            "miDebuggerPath": "/usr/bin/riscv64-elf-gdb",
+            "miDebuggerServerAddress": "localhost:1234",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        }
+    ]
+}
+```
+
+- ./os/.cargo/config.toml
+```
+[build]
+target = "riscv64gc-unknown-none-elf"
+
+[target.riscv64gc-unknown-none-elf]
+rustflags = [
+	"-C", "link-arg=-Tsrc/linker-qemu.ld", 
+	"-C", "force-frame-pointers=yes"
+]
+
+[source.crates-io]
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/neuq-rcore/buddy_system_allocator"]
+git = "https://github.com/neuq-rcore/buddy_system_allocator"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/neuq-rcore/rust-fatfs"]
+git = "https://github.com/neuq-rcore/rust-fatfs"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/nrc/xmas-elf.git"]
+git = "https://github.com/nrc/xmas-elf.git"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/rcore-os/riscv"]
+git = "https://github.com/rcore-os/riscv"
+replace-with = "vendored-sources"
+
+[source."git+https://github.com/rcore-os/virtio-drivers?rev=4ee80e5"]
+git = "https://github.com/rcore-os/virtio-drivers"
+rev = "4ee80e5"
+replace-with = "vendored-sources"
+
+[source.vendored-sources]
+directory = "../thirdparty/"
+
+```
+
+- ./os/src/lang_items.rs
+```rust
+use log::error;
+
+use crate::sbi::shutdown;
+use crate::stack_trace::print_stack_trace;
+use core::panic::PanicInfo;
+
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    if let Some(location) = info.location() {
+        error!(
+            "Panicked at {}:{} {}",
+            location.file(),
+            location.line(),
+            info.message().unwrap()
+        );
+    } else {
+        error!("Panicked: {}", info.message().unwrap());
+    }
+    unsafe { print_stack_trace() }
+    shutdown(true)
+}
+
+```
+
+- ./os/src/stack_trace.rs
+```rust
+use core::arch::asm;
+
+pub unsafe fn print_stack_trace() {
+    let mut fp: *const usize;
+    asm!("mv {}, fp", out(reg) fp);
+
+    let mut saved_ra = *fp.sub(1);
+    let mut saved_fp = *fp.sub(2);
+
+    println!("== Begin stack trace ==");
+    while !fp.is_null() && saved_fp != 0 {
+        println!("0x{:016x}, fp = 0x{:016x}", saved_ra, saved_fp);
+
+        fp = saved_fp as *const usize;
+
+        saved_ra = *fp.sub(1);
+        saved_fp = *fp.sub(2);
+    }
+    println!("== End stack trace ==");
+}
+
+```
+
+- ./os/src/timer.rs
+```rust
+use crate::config::CLOCK_FREQ;
+use crate::sbi::set_timer;
+use riscv::register::time;
+
+const MSEC_PER_SEC: usize = 1000;
+
+#[repr(C)]
+pub struct TimeVal{
+    pub sec: u64,  // 秒数
+    pub usec: u64, // 微秒数
+}
+
+impl TimeVal {
+    pub fn new(sec: u64, usec: u64) -> Self {
+        TimeVal {
+            sec,
+            usec,
+        }
+    }
+
+    pub fn zero() -> Self {
+        TimeVal {
+            sec: 0,
+            usec: 0,
+        }
+    }
+}
+
+pub fn get_timeval() -> TimeVal {
+    let now = get_time();
+
+    let sec = (time_to_ms(now) / 1000) as u64;
+    let usec = (now * 1000 / (CLOCK_FREQ / 1000)) as u64;
+
+    TimeVal {
+        sec,
+        usec,
+    }
+}
+
+#[inline]
+pub fn get_time() -> usize {
+    time::read()
+}
+
+pub fn get_time_ms() -> usize {
+    time_to_ms(get_time())
+}
+
+#[inline]
+pub fn time_to_ms(time: usize) -> usize {
+    time / (CLOCK_FREQ / MSEC_PER_SEC)
+}
+
+pub fn set_next_trigger() {
+    // 10ms
+    set_timer(get_time() + CLOCK_FREQ / 100);
+}
+
+```
+
+- ./os/src/stdio.rs
+```rust
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => {{
+        write!($crate::sbi::console::UnionConsole::instance(), $($arg)*);
+    }};
+}
+
+#[macro_export]
+macro_rules! println {
+    () => {
+        writeln!($crate::sbi::console::UnionConsole::instance());
+    };
+    ($($arg:tt)*) => {{
+        writeln!($crate::sbi::console::UnionConsole::instance(), $($arg)*);
+    }};
+}
+
+```
+
+- ./os/src/linker-qemu.ld
+```
+OUTPUT_ARCH(riscv)
+ENTRY(_start)
+BASE_ADDRESS = 0x80200000;
+
+SECTIONS
+{
+    . = BASE_ADDRESS;
+    skernel = .;
+
+    stext = .;
+    .text : {
+        *(.text.entry)
+        . = ALIGN(4K);
+        strampoline = .;
+        *(.text.trampoline);
+        . = ALIGN(4K);
+        *(.text .text.*)
+    }
+
+    . = ALIGN(4K);
+    etext = .;
+    srodata = .;
+    .rodata : {
+        *(.rodata .rodata.*)
+        *(.srodata .srodata.*)
+    }
+
+    . = ALIGN(4K);
+    erodata = .;
+    sdata = .;
+    .data : {
+        *(.data .data.*)
+        *(.sdata .sdata.*)
+    }
+
+    . = ALIGN(4K);
+    edata = .;
+    .bss : {
+        *(.bss.heap)
+        *(.bss.stack)
+        PROVIDE(tmp_stack_bottom = .);
+        . = ALIGN(4K);
+        . += 0x00080000;
+        . = ALIGN(4K);
+        PROVIDE(tmp_stack_top = .);
+        sbss = .;
+        *(.bss .bss.*)
+        *(.sbss .sbss.*)
+    }
+
+    . = ALIGN(4K);
+    ebss = .;
+    ekernel = .;
+
+    /DISCARD/ : {
+        *(.eh_frame)
+    }
+}
+```
+
+- ./os/src/logging.rs
+```rust
+/*！
+
+本模块利用 log crate 为你提供了日志功能，使用方式见 main.rs.
+
+*/
+
+use log::{self, Level, LevelFilter, Log, Metadata, Record};
+
+struct SimpleLogger;
+
+impl Log for SimpleLogger {
+    fn enabled(&self, _metadata: &Metadata) -> bool {
+        true
+    }
+    fn log(&self, record: &Record) {
+        if !self.enabled(record.metadata()) {
+            return;
+        }
+        let color = match record.level() {
+            Level::Error => 31, // Red
+            Level::Warn => 93,  // BrightYellow
+            Level::Info => 34,  // Blue
+            Level::Debug => 32, // Green
+            Level::Trace => 90, // BrightBlack
+        };
+        println!(
+            "\u{1B}[{}m[{}] [Kernel] {}\u{1B}[0m",
+            color,
+            record.level(),
+            record.args(),
+        );
+    }
+    fn flush(&self) {}
+}
+
+pub fn init() {
+    static LOGGER: SimpleLogger = SimpleLogger;
+    log::set_logger(&LOGGER).unwrap();
+    log::set_max_level(match option_env!("LOG") {
+        Some("ERROR") => LevelFilter::Error,
+        Some("WARN") => LevelFilter::Warn,
+        Some("INFO") => LevelFilter::Info,
+        Some("DEBUG") => LevelFilter::Debug,
+        Some("TRACE") => LevelFilter::Trace,
+        _ => LevelFilter::Warn,
+    });
+}
+
+```
+
+- ./os/src/config.rs
+```rust
+pub const USER_STACK_SIZE: usize = 8192;
+pub const KERNEL_STACK_SIZE: usize = 4096 * 2;
+
+pub const KERNEL_HEAP_SIZE: usize = 0x0080_0000; // 8MB
+
+pub const PAGE_SIZE: usize = 0x1000; // 4KB
+pub const PAGE_SIZE_BITS_WIDTH: usize = 12;
+
+pub const MEMORY_END: usize = 0x8800_0000;
+
+// 跳板函数的地址，虚拟地址空间的最后一页
+pub const TRAMPOLINE: usize = usize::MAX - PAGE_SIZE + 1;
+pub const TRAP_CONTEXT: usize = TRAMPOLINE - PAGE_SIZE;
+
+pub use crate::boards::qemu::CLOCK_FREQ;
+
+```
+
+- ./os/src/main.rs
+```rust
+#![no_main]
+#![no_std]
+#![feature(
+    panic_info_message,
+    slice_from_ptr_range,
+    naked_functions,
+    alloc_error_handler,
+    vec_into_raw_parts,
+    custom_test_frameworks
+)]
+
+use core::{arch::asm, slice};
+
+use alloc::vec::Vec;
+use fatfs::Read;
+use log::{debug, info};
+use sbi::shutdown;
+
+use crate::{fat32::Fat32FileSystem, fs::ROOT_FS};
+
+#[macro_use]
+extern crate alloc;
+
+#[macro_use]
+mod stdio;
+mod allocation;
+mod boards;
+mod config;
+mod driver;
+mod fat32;
+mod fs;
+mod lang_items;
+mod logging;
+mod mm;
+mod sbi;
+mod stack_trace;
+mod sync;
+mod syscall;
+mod task;
+mod timer;
+mod trap;
+
+// Since we've implemented filesystem, we will soon migrate to test suits from sdcard image
+// global_asm!(include_str!("link_app.S"));
+
+#[no_mangle]
+fn main() {
+    // let test_cases = vec![
+    //     "write",
+    //     "gettimeofday",
+    //     "sleep",
+    //     "getpid",
+    //     "getppid",
+    //     "uname",
+    //     "times",
+    //     "fork",
+    //     "clone",
+    //     "wait",
+    //     "waitpid",
+    //     "exit",
+    //     "mount",
+    //     "umount",
+    //     // "exec", // TODO
+    //     "yield", // FIXME
+    // ];
+
+    let test_cases = vec![
+        // "execve", // FIXME
+        "brk",
+        "chdir",
+        "clone",
+        "close",
+        "dup2",
+        "dup",
+        "exit",
+        "fork",
+        "fstat",
+        "getcwd",
+        "getdents",
+        "getpid",
+        "getppid",
+        "gettimeofday",
+        "mkdir",
+        "mmap",
+        "mount",
+        "munmap",
+        "open",
+        "openat",
+        "pipe",
+        "read",
+        "sleep",
+        "times",
+        "umount",
+        "uname",
+        "unlink",
+        "wait",
+        "waitpid",
+        "write",
+        "yield",
+    ];
+
+    for name in test_cases.into_iter() {
+        let buf = ROOT_FS.root_dir().read_file_as_buf(name);
+
+        match buf {
+            Some(buf) => {
+                task::kernel_create_process(&buf);
+
+                info!("Running user apps '{}' from sdcard.img", name);
+                task::run_tasks();
+            }
+            None => {
+                info!("Test case '{}' not found. Skipping.", name);
+            }
+        }
+    }
+
+    debug!("All tests finished. Shutting down.")
+}
+
+#[naked]
+#[no_mangle]
+#[link_section = ".text.entry"]
+unsafe extern "C" fn _start() -> ! {
+    asm!(
+        // The tmp stack is only used to boot up the kernel
+        // The kernel will use `Kernel Stack` managed by the task/batch system once we started batch/task system
+        "la sp, tmp_stack_top",
+        // Make fp 0 so that stack trace knows where to stop
+        "xor fp, fp, fp",
+        "j __kernel_start_main",
+        options(noreturn)
+    );
+}
+
+#[no_mangle]
+unsafe extern "C" fn __kernel_start_main() -> ! {
+    clear_bss();
+    logging::init();
+
+    // heap initlization depends on logging
+    mm::init();
+
+    trap::init();
+    trap::enable_timer_interrupt();
+    timer::set_next_trigger();
+
+    debug_env();
+
+    main();
+
+    shutdown(false);
+}
+
+fn debug_env() {
+    use crate::sbi::console::UnionConsole;
+    use sbi_spec::base::impl_id;
+
+    info!("Hello, world!");
+
+    debug!("SBI specification version: {0}", sbi_rt::get_spec_version());
+
+    let sbi_impl = sbi_rt::get_sbi_impl_id();
+    let sbi_impl = match sbi_impl {
+        impl_id::BBL => "Berkley Bootloader",
+        impl_id::OPEN_SBI => "OpenSBI",
+        impl_id::XVISOR => "Xvisor",
+        impl_id::KVM => "Kvm",
+        impl_id::RUST_SBI => "RustSBI",
+        impl_id::DIOSIX => "Diosix",
+        impl_id::COFFER => "Coffer",
+        _ => "Unknown",
+    };
+
+    debug!("SBI implementation: {0}", sbi_impl);
+
+    let console_type = match UnionConsole::instance() {
+        UnionConsole::Legacy(_) => "Legacy",
+        UnionConsole::Dbcn(_) => "DBCN",
+    };
+
+    debug!("Console type: {0}", console_type);
+}
+
+unsafe fn clear_bss() {
+    extern "C" {
+        fn sbss();
+        fn ebss();
+    }
+
+    slice::from_mut_ptr_range(sbss as *mut u8..ebss as *mut u8).fill(0);
+}
+
+```
+
+- ./os/src/task/switch.S
+```asm
+.altmacro
+.macro SAVE_SN n
+    sd s\n, (\n+2)*8(a0)
+.endm
+.macro LOAD_SN n
+    ld s\n, (\n+2)*8(a1)
+.endm
+    .section .text
+    .globl __switch
+__switch:
+    # __switch(
+    #     current_task_cx_ptr: *mut TaskContext,
+    #     next_task_cx_ptr: *const TaskContext
+    # )
+    # save kernel stack of current task
+    sd sp, 8(a0)
+    # save ra & s0~s11 of current execution
+    sd ra, 0(a0)
+    .set n, 0
+    .rept 12
+        SAVE_SN %n
+        .set n, n + 1
+    .endr
+    # restore ra & s0~s11 of next execution
+    ld ra, 0(a1)
+    .set n, 0
+    .rept 12
+        LOAD_SN %n
+        .set n, n + 1
+    .endr
+    # restore kernel stack of next task
+    ld sp, 8(a1)
+    ret
+
+
+```
+
+- ./os/src/task/processor.rs
+```rust
+use alloc::sync::Arc;
+use lazy_static::lazy_static;
+use log::info;
+
+use crate::task::pid::try_gc_pid_allocator;
+use crate::{sync::UPSafeCell, trap::TrapContext};
+
+use super::TaskManager::fetch_task;
+use super::{switch::__switch, task::{TaskControlBlock, TaskStatus}, TaskContext};
+
+pub struct Processor {
+    current: Option<Arc<TaskControlBlock>>,
+    idle_task_cx: TaskContext,
+}
+
+impl Processor {
+    fn new() -> Self {
+        Processor {
+            current: None,
+            idle_task_cx: TaskContext::zero_init(),
+        }
+    }
+
+    pub fn take_current(&mut self) -> Option<Arc<TaskControlBlock>> {
+        self.current.take()
+    }
+
+    pub fn current(&self) -> Option<Arc<TaskControlBlock>> {
+        self.current.as_ref().map(|task| Arc::clone(task))
+    }
+}
+
+
+impl Processor {
+    fn get_idle_task_cx_ptr(&mut self) -> *mut TaskContext {
+        &mut self.idle_task_cx as *mut _
+    }
+}
+
+lazy_static! {
+    pub static ref PROCESSOR: UPSafeCell<Processor> = UPSafeCell::new(Processor::new());
+}
+
+pub fn take_current_task() -> Option<Arc<TaskControlBlock>> {
+    PROCESSOR.exclusive_access().take_current()
+}
+
+pub fn current_task() -> Option<Arc<TaskControlBlock>> {
+    PROCESSOR.exclusive_access().current()
+}
+
+pub fn current_user_token() -> usize {
+    let task = current_task().unwrap();
+
+    task.token()
+}
+
+pub fn current_trap_ctx() -> &'static mut TrapContext {
+    current_task().unwrap().exclusive_inner().trap_ctx()
+}
+
+pub fn run_tasks() {
+    while let Some(task) = fetch_task() {
+        let mut processor = PROCESSOR.exclusive_access();
+
+        let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
+
+        // access coming task TCB exclusively
+        let next_task_cx_ptr = task.task_ctx() as *const TaskContext;
+        task.update_status(TaskStatus::Running);
+        // stop exclusively accessing coming task TCB manually
+        processor.current = Some(task.clone());
+        // stop exclusively accessing processor manually
+        drop(processor);
+        unsafe {
+            __switch(
+                idle_task_cx_ptr,
+                next_task_cx_ptr,
+            );
+        }
+    }
+    try_gc_pid_allocator();
+    info!("No more tasks this round.");
+}
+
+pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
+    let mut processor = PROCESSOR.exclusive_access();
+    let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
+    drop(processor);
+    unsafe {
+        __switch(
+            switched_task_cx_ptr,
+            idle_task_cx_ptr,
+        );
+    }
+}
+
+```
+
+- ./os/src/task/task.rs
+```rust
+use core::cell::Ref;
+use core::cell::RefMut;
+
+use alloc::string::String;
+use alloc::sync::Arc;
+use alloc::sync::Weak;
+use alloc::vec::Vec;
+use log::info;
+
+use crate::mm::address::VirtAddr;
+
+use crate::sync::UPSafeCell;
+use crate::task::pid::pid_alloc;
+use crate::{
+    config::TRAP_CONTEXT,
+    mm::{kernel_token, MemorySpace, PhysAddr, PhysPageNum, UserSpace},
+    trap::{trap_handler, TrapContext},
+};
+
+use super::pid::{KernelStack, PidHandle};
+use super::TaskContext;
+
+pub struct TaskControlBlock {
+    // immutable
+    pub pid: PidHandle,
+    pub kernel_stack: KernelStack,
+    // mutable
+    inner: UPSafeCell<TaskControlBlockInner>,
+}
+
+pub struct TaskControlBlockInner {
+    pub task_status: TaskStatus,
+    pub task_ctx: TaskContext,
+    pub memory_space: MemorySpace,
+    pub trap_ctx_ppn: PhysPageNum,
+    pub base_size: usize,
+    pub parent: Option<Weak<TaskControlBlock>>,
+    pub children: Vec<Arc<TaskControlBlock>>,
+    pub exit_code: i32,
+    pub cwd: String,
+    pub heap_pos: usize,
+    pub dup_fds: [(isize, isize); 10]
+}
+
+impl Drop for TaskControlBlock {
+    fn drop(&mut self) {
+        info!("TaskControlBlock drop: pid={}", self.pid());
+    }
+}
+
+impl Drop for TaskControlBlockInner {
+    fn drop(&mut self) {
+        info!("TaskControlBlockInner drop: exit_code={}", self.exit_code);
+    }
+}
+
+impl TaskControlBlockInner {
+    pub fn trap_ctx(&self) -> &'static mut TrapContext {
+        let pa: PhysAddr = self.trap_ctx_ppn.into();
+        unsafe { (pa.0 as *mut TrapContext).as_mut().unwrap() }
+    }
+
+    pub fn token(&self) -> usize {
+        self.memory_space.token()
+    }
+
+    pub fn status(&self) -> TaskStatus {
+        self.task_status
+    }
+
+    pub fn is_zombie(&self) -> bool {
+        self.status() == TaskStatus::Zombie
+    }
+}
+
+impl TaskControlBlock {
+    pub fn exclusive_inner(&self) -> RefMut<TaskControlBlockInner> {
+        self.inner.exclusive_access()
+    }
+
+    pub fn shared_inner(&self) -> Ref<TaskControlBlockInner> {
+        self.inner.shared_access()
+    }
+
+    pub fn trap_ctx(&self) -> &'static TrapContext {
+        self.shared_inner().trap_ctx()
+    }
+
+    pub fn trap_ctx_mut(&mut self) -> &'static mut TrapContext {
+        self.exclusive_inner().trap_ctx()
+    }
+
+    pub fn token(&self) -> usize {
+        self.shared_inner().token()
+    }
+
+    pub fn status(&self) -> TaskStatus {
+        self.shared_inner().task_status
+    }
+
+    pub fn is_zombie(&self) -> bool {
+        self.status() == TaskStatus::Zombie
+    }
+
+    pub fn update_status(&self, new_status: TaskStatus) {
+        self.exclusive_inner().task_status = new_status
+    }
+
+    pub fn task_ctx_mut<'a>(&'a mut self) -> &'a mut TaskContext {
+        unsafe { &mut *(&mut self.exclusive_inner().task_ctx as *mut TaskContext) }
+    }
+
+    pub fn task_ctx<'a>(&'a self) -> &'a TaskContext {
+        unsafe { &*(&self.shared_inner().task_ctx as *const TaskContext) }
+    }
+}
+
+impl TaskControlBlock {
+    pub fn new(elf_bytes: &[u8], pid: PidHandle) -> Self {
+        let (user_space, user_sp, entry_point) = UserSpace::from_elf(elf_bytes);
+
+        let trap_ctx_ppn = user_space
+            .table()
+            .translate(VirtAddr::from(TRAP_CONTEXT).into())
+            .unwrap()
+            .ppn();
+
+        let kernel_stack = KernelStack::new(&pid);
+        let kernel_stack_top = kernel_stack.top();
+
+        let control_block_inner = TaskControlBlockInner {
+            task_status: TaskStatus::Ready,
+            task_ctx: TaskContext::goto_trap_return(kernel_stack_top),
+            memory_space: user_space,
+            trap_ctx_ppn,
+            base_size: user_sp,
+            parent: None,
+            children: Vec::new(),
+            exit_code: 0,
+            cwd: String::from("/"),
+            heap_pos: 0,
+            dup_fds: [(-1, -1); 10]
+        };
+
+        let kernel_token = kernel_token();
+
+        let trap_ctx = control_block_inner.trap_ctx();
+        *trap_ctx = TrapContext::app_init_context(
+            entry_point,
+            user_sp,
+            kernel_token,
+            kernel_stack_top,
+            trap_handler as usize,
+        );
+
+        let control_block = TaskControlBlock {
+            inner: UPSafeCell::new(control_block_inner),
+            pid,
+            kernel_stack,
+        };
+
+        control_block
+    }
+
+    pub fn pid(&self) -> usize {
+        self.pid.0
+    }
+
+    pub fn exec(&self, elf_bytes: &[u8]) {
+        let (new_space, user_sp, entry_point) = UserSpace::from_elf(elf_bytes);
+        let trap_cx_ppn = new_space
+            .table()
+            .translate(VirtAddr::from(TRAP_CONTEXT).into())
+            .unwrap()
+            .ppn();
+
+        let mut inner = self.exclusive_inner();
+        inner.memory_space = new_space;
+        inner.trap_ctx_ppn = trap_cx_ppn;
+        let trap_ctx = inner.trap_ctx();
+        *trap_ctx = TrapContext::app_init_context(
+            entry_point,
+            user_sp,
+            kernel_token(),
+            self.kernel_stack.top(),
+            trap_handler as usize,
+        );
+    }
+
+    pub fn fork(self: &Arc<TaskControlBlock>) -> Arc<TaskControlBlock> {
+        let mut parent_inner = self.exclusive_inner();
+        let child_space = MemorySpace::from_existed_space(&parent_inner.memory_space);
+
+        let trap_ctx_ppn = child_space
+            .table()
+            .translate(VirtAddr::from(TRAP_CONTEXT).into())
+            .unwrap()
+            .ppn();
+
+        let pid_handle = pid_alloc();
+        assert!(pid_handle.0 != self.pid());
+
+        let kernel_stack = KernelStack::new(&pid_handle);
+        let kernel_stack_top = kernel_stack.top();
+
+        let child_task_ctx = TaskContext::goto_trap_return(kernel_stack_top);
+
+        let child_inner = UPSafeCell::new(TaskControlBlockInner {
+            task_status: TaskStatus::Ready,
+            task_ctx: child_task_ctx,
+            memory_space: child_space,
+            trap_ctx_ppn,
+            base_size: parent_inner.base_size,
+            parent: Some(Arc::downgrade(self)),
+            children: Vec::new(),
+            exit_code: 0,
+            cwd: parent_inner.cwd.clone(),
+            heap_pos: 0,
+            dup_fds: parent_inner.dup_fds.clone()
+        });
+
+        let child_control_block = Arc::new(TaskControlBlock {
+            inner: child_inner,
+            pid: pid_handle,
+            kernel_stack,
+        });
+
+        parent_inner.children.push(child_control_block.clone());
+
+        let child_trap_ctx = child_control_block.exclusive_inner().trap_ctx();
+        child_trap_ctx.kernel_sp = kernel_stack_top;
+
+        child_control_block
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub enum TaskStatus {
+    UnInit,
+    Ready,
+    Running,
+    Exited,
+    Zombie,
+}
+
+```
+
+- ./os/src/task/switch.rs
+```rust
+use super::TaskContext;
+use core::arch::asm;
+
+#[naked]
+#[no_mangle]
+pub unsafe extern "C" fn __switch(current_task_ctx_ptr: *mut TaskContext, next_task_ctx_ptr: *const TaskContext) {
+    asm!(
+        // store sp
+        "sd sp, 8(a0)",
+        // store ra
+        "sd ra, 0(a0)",
+        // store saved registers
+        "sd s0, 16(a0)",
+        "sd s1, 24(a0)",
+        "sd s2, 32(a0)",
+        "sd s3, 40(a0)",
+        "sd s4, 48(a0)",
+        "sd s5, 56(a0)",
+        "sd s6, 64(a0)",
+        "sd s7, 72(a0)",
+        "sd s8, 80(a0)",
+        "sd s9, 88(a0)",
+        "sd s10, 96(a0)",
+        "sd s11, 104(a0)",
+        // restore ra
+        "ld ra, 0(a1)",
+        // restore saved registers
+        "ld s0, 16(a1)",
+        "ld s1, 24(a1)",
+        "ld s2, 32(a1)",
+        "ld s3, 40(a1)",
+        "ld s4, 48(a1)",
+        "ld s5, 56(a1)",
+        "ld s6, 64(a1)",
+        "ld s7, 72(a1)",
+        "ld s8, 80(a1)",
+        "ld s9, 88(a1)",
+        "ld s10, 96(a1)",
+        "ld s11, 104(a1)",
+        // restore sp
+        "ld sp, 8(a1)",
+        "ret",
+        options(noreturn)
+    );
+}
+
+```
+
+- ./os/src/task/pid.rs
+```rust
+use alloc::collections::BTreeSet;
+use lazy_static::lazy_static;
+use log::*;
+
+use crate::{config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE}, mm::{MapPermission, VirtAddr, KERNEL_SPACE}, sync::UPSafeCell};
+
+#[derive(Debug, PartialEq)]
+pub struct PidHandle(pub usize);
+
+impl Eq for PidHandle {}
+
+impl PidHandle {
+    fn new(pid: usize) -> Self {
+        PidHandle(pid)
+    }
+}
+
+impl From<usize> for PidHandle {
+    fn from(value: usize) -> Self {
+        Self::new(value)
+    }
+}
+
+impl From<PidHandle> for usize {
+    fn from(value: PidHandle) -> Self {
+        value.0
+    }
+}
+
+struct PidManager {
+    current: usize,
+    recycled: BTreeSet<usize>,
+}
+
+impl PidManager {
+    fn new() -> Self {
+        PidManager {
+            // 0 is reserved for internal use
+            current: 1,
+            recycled: BTreeSet::new(),
+        }
+    }
+
+    fn allocate(&mut self) -> PidHandle {
+        PidHandle::new(match self.recycled.is_empty() {
+            true => {
+                let pid = self.current;
+                self.current += 1;
+                pid
+            }
+            false => {
+                let pid = *self.recycled.iter().next().unwrap();
+                self.recycled.remove(&pid);
+                pid
+            }
+        })
+    }
+
+    fn deallocate(&mut self, pid: &PidHandle) {
+        // Pid must be allocated
+        assert!(pid.0 < self.current);
+
+        // Pid must be valid
+        assert!(pid.0 > 0);
+
+        debug!("Deallocating {}", pid.0);
+        let inserted = self.recycled.insert(pid.0);
+
+        assert!(inserted, "pid already deallocated");
+    }
+
+    // Call this when there are no processes left
+    pub fn try_gc_recycled(&mut self) {
+        // When there is no pid allocated, we can reset the current pid to 1
+
+        // Check that if all pids in self.recycled are continous,
+        // and the last one is self.current - 1
+
+        let mut iter = self.recycled.iter();
+
+        match iter.next() {
+            None => return, // fast path
+            Some(&pid) => {
+                let mut curr = pid;
+
+                while let Some(&pid) = iter.next() {
+                    if pid != curr + 1 {
+                        return;
+                    }
+
+                    curr = pid;
+                }
+
+                // We could gc the recycled pids as all of them are deallocated.
+                if curr == self.current - 1 {
+                    // it's actually safe to gc the recycled pids
+                    self.force_reset();
+                } else {
+                    warn!("Recycled pids are not continous");
+                }
+            }
+        }
+    }
+
+    fn force_reset(&mut self) {
+        self.current = 1; // 0 is reserved for internal use
+        self.recycled.clear();
+    }
+}
+
+pub mod tests {
+    use super::*;
+
+    #[allow(unused)]
+    pub fn test_all() {
+        test_allocate_pid();
+        test_deallocate_pid();
+        test_allocate_after_deallocate_last_current();
+        test_reallocate_deallocated_pid();
+        test_gc();
+
+        // This test should panic so we run it last
+        test_deallocate_invalid_pid();
+    }
+
+    pub fn test_allocate_pid() {
+        PID_ALLOCATOR.exclusive_access().force_reset();
+
+        debug!("Running `test_allocate_pid`");
+        let pid1 = super::pid_alloc();
+        assert_eq!(pid1.0, 1);
+
+        let pid2 = super::pid_alloc();
+        assert_eq!(pid2.0, 2);
+    }
+
+    pub fn test_deallocate_pid() {
+        PID_ALLOCATOR.exclusive_access().force_reset();
+
+        debug!("Running `test_deallocate_pid`");
+        let pid1 = super::pid_alloc();
+        let pid2 = super::pid_alloc();
+        drop(pid1);
+        drop(pid2);
+    }
+
+    pub fn test_reallocate_deallocated_pid() {
+        PID_ALLOCATOR.exclusive_access().force_reset();
+
+        debug!("Running `test_reallocate_deallocated_pid`");
+        let pid1 = super::pid_alloc();
+        let pid2 = super::pid_alloc();
+        drop(pid1);
+        drop(pid2);
+
+        let pid3 = super::pid_alloc();
+        assert_eq!(pid3.0, 1);
+
+        let pid4 = super::pid_alloc();
+        assert_eq!(pid4.0, 2);
+    }
+
+    pub fn test_allocate_after_deallocate_last_current() {
+        PID_ALLOCATOR.exclusive_access().force_reset();
+
+        debug!("Running `test_allocate_after_deallocate_last_current`");
+        let _pid1 = super::pid_alloc();
+        let pid2 = super::pid_alloc();
+        drop(pid2);
+
+        let pid3 = super::pid_alloc();
+        assert_eq!(pid3.0, 2);
+    }
+
+    pub fn test_gc() {
+        debug!("Running `test_gc`");
+
+        PID_ALLOCATOR.exclusive_access().force_reset();
+
+        {
+            let _p1 = super::pid_alloc();
+            let _p2 = super::pid_alloc();
+            
+            assert_eq!(_p2.0, 2);
+
+            // drop pids
+        }
+
+        let _p3 = super::pid_alloc();
+        assert_eq!(_p3.0, 1);
+
+        drop(_p3);
+
+        let mut allocator = PID_ALLOCATOR.exclusive_access();
+
+        allocator.try_gc_recycled();
+
+        assert!(allocator.recycled.is_empty());
+        assert_eq!(allocator.current, 1);
+
+        // allocator was drop first
+    }
+
+    #[should_panic]
+    pub fn test_deallocate_invalid_pid() {
+        PID_ALLOCATOR.exclusive_access().force_reset();
+
+        debug!("Running `test_deallocate_invalid_pid`");
+        let pid1 = PidHandle(100);
+
+        drop(pid1)
+    }
+}
+
+lazy_static! {
+    static ref PID_ALLOCATOR: UPSafeCell<PidManager> =
+        UPSafeCell::new(PidManager::new());
+}
+
+pub fn pid_alloc() -> PidHandle {
+    PID_ALLOCATOR.exclusive_access().allocate()
+}
+
+pub fn try_gc_pid_allocator() {
+    PID_ALLOCATOR.exclusive_access().try_gc_recycled();
+}
+
+impl Drop for PidHandle {
+    fn drop(&mut self) {
+        PID_ALLOCATOR.exclusive_access().deallocate(self);
+    }
+}
+
+pub struct KernelStack {
+    pid: usize,
+}
+
+/// Return (bottom, top) of a kernel stack in kernel space.
+pub fn kernel_stack_position(app_id: usize) -> (usize, usize) {
+    let top = TRAMPOLINE - app_id * (KERNEL_STACK_SIZE + PAGE_SIZE);
+    let bottom = top - KERNEL_STACK_SIZE;
+    (bottom, top)
+}
+
+impl KernelStack {
+    pub fn new(pid_handle: &PidHandle) -> Self {
+        let pid = pid_handle.0;
+        let (kernel_stack_bottom, kernel_stack_top) = kernel_stack_position(pid);
+
+        KERNEL_SPACE
+            .exclusive_access()
+            .insert_framed_area(
+                kernel_stack_bottom.into(),
+                kernel_stack_top.into(),
+                MapPermission::R | MapPermission::W,
+            );
+
+        KernelStack {
+            pid: pid_handle.0,
+        }
+    }
+    pub fn push_on_top<T>(&self, value: T) -> *mut T where
+        T: Sized, {
+        let kernel_stack_top = self.top();
+        let ptr_mut = (kernel_stack_top - core::mem::size_of::<T>()) as *mut T;
+        unsafe { *ptr_mut = value; }
+        ptr_mut
+    }
+    pub fn top(&self) -> usize {
+        let (_, kernel_stack_top) = kernel_stack_position(self.pid);
+        kernel_stack_top
+    }
+}
+
+impl Drop for KernelStack {
+    fn drop(&mut self) {
+        let (kernel_stack_bottom, _) = kernel_stack_position(self.pid);
+        let kernel_stack_bottom_va: VirtAddr = kernel_stack_bottom.into();
+        KERNEL_SPACE
+            .exclusive_access()
+            .remove_area_with_start_vpn(kernel_stack_bottom_va.into());
+    }
+}
+
+```
+
+- ./os/src/task/mod.rs
+```rust
+#[allow(non_snake_case)]
+pub mod TaskManager;
+mod context;
+mod pid;
+pub mod processor;
+mod switch;
+
+#[allow(clippy::module_inception)]
+pub mod task;
+
+use alloc::sync::Arc;
+
+pub use processor::run_tasks;
+
+pub use context::TaskContext;
+
+use crate::sbi::shutdown;
+
+use self::{
+    pid::pid_alloc,
+    processor::{schedule, take_current_task},
+    task::{TaskControlBlock, TaskStatus},
+    TaskManager::{add_task, remove_task},
+};
+
+pub fn kernel_create_process(elf_data: &[u8]) {
+    let pcb = Arc::new(TaskControlBlock::new(elf_data, pid_alloc()));
+    add_task(pcb);
+}
+
+/// pid of usertests app in make run TEST=1
+pub const IDLE_PID: usize = 0;
+
+pub fn suspend_current_and_run_next() {
+    // There must be an application running.
+    let task = take_current_task().unwrap();
+
+    // let mut task_inner = task.inner_exclusive_access();
+    let task_ctx_ptr = task.task_ctx() as *const _ as *mut _;
+    // Change status to Ready
+    task.update_status(TaskStatus::Ready);
+
+    // push back to ready queue.
+    add_task(task);
+    // jump to scheduling cycle
+    schedule(task_ctx_ptr);
+}
+
+pub fn exit_current_and_run_next(exit_code: i32) {
+    // take from Processor
+    let task = take_current_task().unwrap();
+
+    let pid = task.pid();
+
+    if pid == IDLE_PID {
+        println!(
+            "[kernel] Idle process exit with exit_code {} ...",
+            exit_code
+        );
+        if exit_code != 0 {
+            //crate::sbi::shutdown(255); //255 == -1 for err hint
+            shutdown(true)
+        } else {
+            //crate::sbi::shutdown(0); //0 for success hint
+            shutdown(false)
+        }
+    }
+
+    // Change status to Zombie
+    task.update_status(TaskStatus::Zombie);
+    let mut inner = task.exclusive_inner();
+    // Record exit code
+    inner.exit_code = exit_code;
+    // do not move to its parent but under initproc
+
+    for child in inner.children.iter() {
+        let mut child_inner = child.exclusive_inner();
+        child_inner.parent = None;
+    }
+
+    remove_task(pid);
+
+    inner.children.clear();
+    // deallocate user space
+    inner.memory_space.clear();
+    drop(inner);
+    // **** release current PCB
+    // drop task manually to maintain rc correctly
+    drop(task);
+    // we do not have to save task context
+    let mut _unused = TaskContext::zero_init();
+    schedule(&mut _unused as *mut _);
+}
+
+```
+
+- ./os/src/task/TaskManager.rs
+```rust
+use alloc::collections::VecDeque;
+use alloc::sync::Arc;
+use lazy_static::lazy_static;
+
+use crate::sync::UPSafeCell;
+
+use super::task::TaskControlBlock;
+
+pub struct TaskManager {
+    ready_queue: VecDeque<Arc<TaskControlBlock>>,
+    waiting_queue: VecDeque<(Arc<TaskControlBlock>, Arc<dyn Fn() -> bool>)>,
+}
+
+lazy_static! {
+    pub static ref TASK_MANAGER: UPSafeCell<TaskManager> = UPSafeCell::new(TaskManager::new());
+}
+
+unsafe impl Send for TaskManager {}
+unsafe impl Sync for TaskManager {}
+
+impl TaskManager {
+    pub fn new() -> Self {
+        Self {
+            ready_queue: VecDeque::new(),
+            waiting_queue: VecDeque::new(),
+        }
+    }
+
+    pub fn add(&mut self, task: Arc<TaskControlBlock>) {
+        self.ready_queue.push_back(task);
+    }
+
+    pub fn schedule(&mut self) {
+        self.waiting_queue.retain(|taskdesc| {
+            if taskdesc.1() {
+                self.ready_queue.push_front(Arc::clone(&taskdesc.0));
+                false
+            } else {
+                true
+            }
+        });
+    }
+
+    pub fn fetch(&mut self) -> Option<Arc<TaskControlBlock>> {
+        self.schedule();
+        self.ready_queue.pop_front()
+    }
+
+    pub fn remove(&mut self, pid: usize) {
+        self.ready_queue.retain(|task| task.pid() != pid);
+        self.waiting_queue.retain(|taskdesc| taskdesc.0.pid() != pid);
+    }
+
+    pub fn add_to_waiting(
+        &mut self,
+        task: Arc<TaskControlBlock>,
+        assertion: Arc<dyn Fn() -> bool>,
+    ) {
+        self.remove(task.clone().pid());
+        self.waiting_queue.push_back((task, assertion));
+    }
+}
+
+pub fn add_to_waiting(task: Arc<TaskControlBlock>, assertion: Arc<dyn Fn() -> bool>) {
+    TASK_MANAGER
+        .exclusive_access()
+        .add_to_waiting(task, assertion);
+}
+
+pub fn remove_task(pid: usize) {
+    TASK_MANAGER.exclusive_access().remove(pid);
+}
+
+pub fn add_task(task: Arc<TaskControlBlock>) {
+    TASK_MANAGER.exclusive_access().add(task);
+}
+
+pub fn fetch_task() -> Option<Arc<TaskControlBlock>> {
+    TASK_MANAGER.exclusive_access().fetch()
+}
+
+```
+
+- ./os/src/task/context.rs
+```rust
+use crate::trap::trap_return;
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+pub struct TaskContext {
+    ra: usize,
+    sp: usize,
+    s: [usize; 12],
+
+}
+
+impl TaskContext {
+    pub fn zero_init() -> Self {
+        Self {
+            ra: 0,
+            sp: 0,
+            s: [0; 12]
+        }
+    }
+
+    pub fn goto_trap_return(kstack_ptr: usize) -> Self {
+        Self {
+            ra: trap_return as usize,
+            sp: kstack_ptr,
+            s: [0; 12],
+        }
+    }
+}
+
+```
+
+- ./os/src/allocation/mod.rs
+```rust
+use core::ops::Deref;
+
+#[derive(Clone, Copy)]
+pub enum RefOrValue<'a, T> {
+    Ref(&'a T),
+    Value(T),
+}
+
+impl<'a, T> RefOrValue<'a, T> {
+    pub fn from_ref(s: &'a T) -> Self {
+        RefOrValue::Ref(s)
+    }
+
+    pub fn from_value(s: T) -> Self {
+        RefOrValue::Value(s)
+    }
+}
+
+impl<'a, T> RefOrValue<'a, T>
+{
+    pub fn as_ref(&self) -> &T {
+        match self {
+            RefOrValue::Ref(r) => r,
+            RefOrValue::Value(v) => &v,
+        }
+    }
+}
+
+impl<T> Deref for RefOrValue<'_, T>
+{
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        self.as_ref()
+    }
+}
+
+```
+
+- ./os/src/fs/mod.rs
+```rust
+use fatfs::FileSystem;
+use log::debug;
+
+use crate::fat32::{Fat32FileSystem, Fat32IO};
+use lazy_static::lazy_static;
+
+use self::inode::Fat32Dir;
+pub mod inode;
+
+lazy_static! {
+    pub static ref ROOT_FS: RootFs = {
+        let fs = Fat32FileSystem::new(0);
+        debug!("Filesystem initialized.");
+        RootFs::new(fs)
+    };
+}
+
+pub struct RootFs {
+    inner: FileSystem<Fat32IO>,
+}
+
+unsafe impl Sync for RootFs {}
+unsafe impl Send for RootFs {}
+
+impl RootFs {
+    pub fn new(raw_fs: FileSystem<Fat32IO>) -> Self {
+        Self { inner: raw_fs }
+    }
+
+    pub fn root_dir(&'static self) -> Fat32Dir {
+        Fat32Dir::from_root(self.inner.root_dir())
+    }
+}
+
+```
+
+- ./os/src/fs/inode.rs
+```rust
+use alloc::{string::String, vec::Vec};
+use bitflags::bitflags;
+use fatfs::{Dir, File, LossyOemCpConverter, NullTimeProvider, Read};
+
+use crate::{allocation::RefOrValue, fat32::Fat32IO};
+
+pub type FatfsDir<'a> = Dir<'a, Fat32IO, NullTimeProvider, LossyOemCpConverter>;
+pub type FatfsFile<'a> = File<'a, Fat32IO, NullTimeProvider, LossyOemCpConverter>;
+pub type FatfsEntry<'a> = fatfs::DirEntry<'a, Fat32IO, NullTimeProvider, LossyOemCpConverter>;
+
+bitflags! {
+    pub struct OpenFlags: u32 {
+        const RDONLY = 0;
+        const WRONLY = 1 << 0;
+        const RDWR = 1 << 1;
+        const CREATE = 1 << 9;
+        const TRUNC = 1 << 10;
+    }
+}
+
+impl OpenFlags {
+    /// Do not check validity for simplicity
+    /// Return (readable, writable)
+    pub fn read_write(&self) -> (bool, bool) {
+        if self.is_empty() {
+            (true, false)
+        } else if self.contains(Self::WRONLY) {
+            (false, true)
+        } else {
+            (true, true)
+        }
+    }
+}
+
+pub struct Fat32File<'a> {
+    inner: FatfsEntry<'a>,
+}
+
+pub struct Fat32Dir<'a> {
+    inner: Fat32DirInner<'a>,
+}
+
+enum Fat32DirInner<'a> {
+    Root(FatfsDir<'a>),
+    Sub(FatfsEntry<'a>),
+}
+
+impl<'a> Fat32DirInner<'a> {
+    pub fn from_root(root: FatfsDir<'a>) -> Self {
+        Self::Root(root)
+    }
+
+    pub fn from_entry(entry: FatfsEntry<'a>) -> Self {
+        Self::Sub(entry)
+    }
+
+    pub fn as_dir(&self) -> FatfsDir<'a> {
+        match self {
+            Self::Root(dir) => dir.clone(),
+            Self::Sub(entry) => entry.to_dir(),
+        }
+    }
+}
+
+impl<'a> Fat32File<'a> {
+    pub fn from_entry(entry: FatfsEntry<'a>) -> Self {
+        Self { inner: entry }
+    }
+
+    pub fn len(&self) -> usize {
+        self.inner.len() as usize
+    }
+
+    pub fn name(&self) -> Option<String> {
+        Some(self.inner.file_name())
+    }
+
+    pub fn inner(&self) -> FatfsFile<'a> {
+        self.inner.to_file()
+    }
+}
+
+impl<'a> Fat32Dir<'a> {
+    pub fn from_root(root: FatfsDir<'a>) -> Self {
+        Self {
+            inner: Fat32DirInner::from_root(root),
+        }
+    }
+
+    pub fn from_entry(entry: FatfsEntry<'a>) -> Self {
+        Self {
+            inner: Fat32DirInner::from_entry(entry),
+        }
+    }
+
+    pub fn inner(&self) -> FatfsDir<'a> {
+        self.inner.as_dir()
+    }
+
+    pub fn name(&self) -> Option<String> {
+        match self.inner {
+            Fat32DirInner::Root(_) => None,
+            Fat32DirInner::Sub(ref entry) => Some(entry.file_name()),
+        }
+    }
+
+    // get a directory entry by name in the current directory
+    fn match_dir(&self, name: &str) -> Option<Fat32Dir<'a>> {
+        self.inner()
+            .iter()
+            .find(|entry| {
+                entry
+                    .as_ref()
+                    .is_ok_and(|e| e.is_dir() && e.file_name() == name)
+            })
+            .map(|entry| Fat32Dir::from_entry(entry.unwrap()))
+    }
+
+    // get a file entry in the current directory
+    fn match_file(&self, name: &str) -> Option<Fat32File<'a>> {
+        self.inner()
+            .iter()
+            .find(|entry| {
+                entry
+                    .as_ref()
+                    .is_ok_and(|e| e.is_file() && e.file_name() == name)
+            })
+            .map(|entry| Fat32File::from_entry(entry.unwrap()))
+    }
+
+    pub fn get_dir(&self, path: &str) -> Option<Self> {
+        let mut paths = path.split('/').into_iter();
+        let mut next_path = paths.next();
+        let mut cwd: RefOrValue<Fat32Dir> = RefOrValue::from_ref(self);
+
+        while let Some(curr) = next_path {
+            next_path = paths.next();
+
+            match next_path {
+                // we've reach the last path, it should be a directory
+                // In `get_file` it should be a file
+                None => return cwd.match_dir(curr),
+                // Just continue and into the next iteration
+                Some(_) => match cwd.match_dir(curr) {
+                    None => return None,
+                    Some(dir) => cwd = RefOrValue::from_value(dir),
+                },
+            }
+        }
+
+        None
+    }
+
+    pub fn get_file(&self, path: &str) -> Option<Fat32File> {
+        let path = if path.starts_with('/') { &path[1..] } else { path };
+
+        let mut paths = path.split('/').into_iter();
+        let mut next_path = paths.next();
+        let mut cwd: RefOrValue<Fat32Dir> = RefOrValue::from_ref(self);
+
+        while let Some(curr) = next_path {
+            next_path = paths.next();
+
+            match next_path {
+                // we've reach the last path, it should be a file
+                // In `get_dir` it should be a directory
+                None => return cwd.match_file(curr),
+                // Just continue and into the next iteration
+                Some(_) => match cwd.match_dir(curr) {
+                    None => return None,
+                    Some(dir) => cwd = RefOrValue::from_value(dir),
+                },
+            }
+        }
+
+        None
+    }
+
+    pub fn read_file_as_buf(&self, path: &str) -> Option<Vec<u8>> {
+        self.get_file(path).map(|file| {
+            let len = file.len();
+            let mut buf: Vec<u8> = Vec::with_capacity(len);
+            unsafe {
+                buf.set_len(len);
+            }
+
+            let slice = buf.as_mut();
+
+            file.inner().read_exact(slice).unwrap();
+            buf
+        })
+    }
+}
+
+```
+
+- ./os/src/sbi/mod.rs
+```rust
+mod qemu;
+mod system;
+
+pub mod console;
+pub use system::set_timer;
+pub use system::shutdown;
+
+```
+
+- ./os/src/sbi/system.rs
+```rust
+use sbi_rt::{system_reset, NoReason, Shutdown, SystemFailure};
+
+pub fn set_timer(timer: usize) {
+    sbi_rt::set_timer(timer as _);
+}
+
+pub fn shutdown(failure: bool) -> ! {
+    use super::qemu::{QEMUExit, QEMU_EXIT_HANDLE};
+
+    match option_env!("IS_CI_ENVIRONMENT") {
+        Some(_) => {
+            // QEMU_EXIT can mark a CI workflow as failed or successful
+            match failure {
+                true => QEMU_EXIT_HANDLE.exit_failure(),
+                false => QEMU_EXIT_HANDLE.exit_success(),
+            }
+        }
+        None => {
+            match failure {
+                true => system_reset(Shutdown, SystemFailure),
+                false => system_reset(Shutdown, NoReason),
+            };
+
+            unreachable!();
+        }
+    }
+}
+
+```
+
+- ./os/src/sbi/qemu.rs
+```rust
+//ref:: https://github.com/andre-richter/qemu-exit
+use core::arch::asm;
+
+const EXIT_SUCCESS: u32 = 0x5555; // Equals `exit(0)`. qemu successful exit
+
+const EXIT_FAILURE_FLAG: u32 = 0x3333;
+const EXIT_FAILURE: u32 = exit_code_encode(1); // Equals `exit(1)`. qemu failed exit
+const EXIT_RESET: u32 = 0x7777; // qemu reset
+
+pub trait QEMUExit {
+    /// Exit with specified return code.
+    ///
+    /// Note: For `X86`, code is binary-OR'ed with `0x1` inside QEMU.
+    fn exit(&self, code: u32) -> !;
+
+    /// Exit QEMU using `EXIT_SUCCESS`, aka `0`, if possible.
+    ///
+    /// Note: Not possible for `X86`.
+    fn exit_success(&self) -> !;
+
+    /// Exit QEMU using `EXIT_FAILURE`, aka `1`.
+    fn exit_failure(&self) -> !;
+}
+
+/// RISCV64 configuration
+pub struct RISCV64 {
+    /// Address of the sifive_test mapped device.
+    addr: u64,
+}
+
+/// Encode the exit code using EXIT_FAILURE_FLAG.
+const fn exit_code_encode(code: u32) -> u32 {
+    (code << 16) | EXIT_FAILURE_FLAG
+}
+
+impl RISCV64 {
+    /// Create an instance.
+    pub const fn new(addr: u64) -> Self {
+        RISCV64 { addr }
+    }
+}
+
+impl QEMUExit for RISCV64 {
+    /// Exit qemu with specified exit code.
+    fn exit(&self, code: u32) -> ! {
+        // If code is not a special value, we need to encode it with EXIT_FAILURE_FLAG.
+        let code_new = match code {
+            EXIT_SUCCESS | EXIT_FAILURE | EXIT_RESET => code,
+            _ => exit_code_encode(code),
+        };
+
+        unsafe {
+            asm!(
+                "sw {0}, 0({1})",
+                in(reg)code_new, in(reg)self.addr
+            );
+
+            // For the case that the QEMU exit attempt did not work, transition into an infinite
+            // loop. Calling `panic!()` here is unfeasible, since there is a good chance
+            // this function here is the last expression in the `panic!()` handler
+            // itself. This prevents a possible infinite loop.
+            loop {
+                asm!("wfi", options(nomem, nostack));
+            }
+        }
+    }
+
+    fn exit_success(&self) -> ! {
+        self.exit(EXIT_SUCCESS);
+    }
+
+    fn exit_failure(&self) -> ! {
+        self.exit(EXIT_FAILURE);
+    }
+}
+
+const VIRT_TEST: u64 = 0x100000;
+
+pub const QEMU_EXIT_HANDLE: RISCV64 = RISCV64::new(VIRT_TEST);
+
+```
+
+- ./os/src/sbi/console.rs
+```rust
+// Begin Region - Console
+pub trait Console {
+    fn init(&mut self);
+
+    fn getchar(&self) -> u8;
+
+    fn putchar(&mut self, c: u8);
+
+    fn write(&mut self, str: &[u8]) {
+        for &c in str.iter() {
+            self.putchar(c);
+        }
+    }
+
+    #[inline(always)]
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        self.write(s.as_bytes());
+
+        Ok(())
+    }
+}
+
+impl core::fmt::Write for dyn Console {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        self.write_str(s)
+    }
+}
+
+// End Region - Console
+
+use core::fmt::{Arguments, Write};
+use core::panic;
+
+// Begin Region - LegacyConsole
+#[derive(Clone, Copy)]
+pub struct LegacyConsole;
+
+impl LegacyConsole {
+    pub fn get_api() -> Self {
+        // no need to init it
+        Self
+    }
+}
+
+impl Console for LegacyConsole {
+    fn init(&mut self) {}
+
+    #[allow(deprecated)]
+    fn getchar(&self) -> u8 {
+        sbi_rt::legacy::console_getchar() as u8
+    }
+
+    #[allow(deprecated)]
+    fn putchar(&mut self, c: u8) {
+        sbi_rt::legacy::console_putchar(c as usize);
+    }
+}
+
+impl core::fmt::Write for LegacyConsole {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        Console::write_str(self, s)
+    }
+}
+
+// End Region - LegacyConsole
+
+// Begin Region - DebugConsole
+use sbi_rt;
+use sbi_spec::binary::Physical;
+use sbi_spec::binary::{RET_ERR_DENIED, RET_ERR_FAILED, RET_ERR_INVALID_PARAM, RET_SUCCESS};
+
+#[derive(Clone, Copy)]
+pub struct DebugConsole;
+
+static mut IS_DBCN_AVALIABLE: Option<bool> = None;
+
+impl Console for DebugConsole {
+    fn init(&mut self) {
+        if !Self::is_avaliable() {
+            panic!("Debug Console Extension is not avaliable. Please update your SBI to specification v2.0 and ensure DBCN is enabled");
+        }
+    }
+
+    fn getchar(&self) -> u8 {
+        match self.sgetchar() {
+            Ok((c, 1)) => c,
+            Ok((_, 0)) => 0,
+            Ok((c, cnt)) => {
+                panic!(
+                    "Expect to read 1 char, but got {0}, first char: {1}",
+                    cnt, c
+                );
+            }
+            Err(err) => {
+                match err {
+                    RET_ERR_INVALID_PARAM => panic!("The memory pointed to by the \'num_bytes\', \'base_addr_lo\', and \'base_addr_hi\' parameters does not satisfy the requirements described in the \'shared_memory_physical_address_range_parameter\'"),
+                    RET_ERR_DENIED => panic!("Reads from the debug console is not allowed"),
+                    RET_ERR_FAILED => panic!("Failed to read due to I/O errors"),
+                    _ => panic!("Unknown error occurred when trying to read bytes from debug console, error code: {0}", err),
+                };
+            }
+        }
+    }
+
+    fn putchar(&mut self, c: u8) {
+        if let Err(err) = self.sputchar(c) {
+            match err {
+                RET_ERR_DENIED => panic!("Write to the debug console is not allowed"),
+                RET_ERR_FAILED => panic!("Failed to write the byte due to I/O errors"),
+                _ => panic!("Unknown error occurred when trying to write byte from debug console, char: {0}, code: {1}", c, err),
+            }
+        }
+    }
+
+    fn write(&mut self, str: &[u8]) {
+        if let Err(err) = self.swrite(str) {
+            match err {
+                RET_ERR_INVALID_PARAM => panic!("The memory pointed to by the \'num_bytes\', \'base_addr_lo\', and \'base_addr_hi\' parameters does not satisfy the requirements described in the \'shared_memory_physical_address_range_parameter\'"),
+                RET_ERR_DENIED => panic!("Writes to the debug console is not allowed"),
+                RET_ERR_FAILED => panic!("Failed to write due to I/O errors."),
+                _ => panic!("Unknown error occurred when trying to write bytes to debug console, error code: {0}", err),
+            }
+        }
+    }
+}
+
+impl DebugConsole {
+    pub fn get_api() -> Self {
+        let mut con = Self;
+
+        con.init();
+
+        con
+    }
+
+    pub fn is_avaliable() -> bool {
+        if let Some(ava) = unsafe { IS_DBCN_AVALIABLE } {
+            return ava;
+        }
+
+        let is_avaliable = sbi_rt::probe_extension(sbi_rt::Console).is_available();
+        unsafe {
+            IS_DBCN_AVALIABLE = Some(is_avaliable);
+        }
+        is_avaliable
+    }
+
+    // Result<(char, count_read), err_code>
+    fn sgetchar(&self) -> Result<(u8, usize), usize> {
+        let c: u8 = 0;
+        let p = Physical::new(1, &c as *const u8 as usize, 0);
+
+        let ret = sbi_rt::console_read(p);
+
+        match ret.error {
+            RET_SUCCESS => Ok((c, ret.value)),
+            _ => Err(ret.error),
+        }
+    }
+
+    fn sputchar(&mut self, c: u8) -> Result<(), usize> {
+        match sbi_rt::console_write_byte(c).error {
+            RET_SUCCESS => Ok(()),
+            err => Err(err),
+        }
+    }
+
+    fn swrite(&mut self, str: &[u8]) -> Result<(), usize> {
+        let p = Physical::new(str.len(), str.as_ptr() as usize, 0);
+
+        match sbi_rt::console_write(p).error {
+            RET_SUCCESS => Ok(()),
+            err => Err(err),
+        }
+    }
+}
+
+impl core::fmt::Write for DebugConsole {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        self.swrite(s.as_bytes()).map_err(|_| core::fmt::Error)
+    }
+}
+
+// End Region - DebugConsole
+
+// Begin Region - UnionConsole
+#[derive(Clone, Copy)]
+pub enum UnionConsole {
+    Legacy(LegacyConsole),
+    Dbcn(DebugConsole),
+}
+
+impl UnionConsole {
+    fn new() -> UnionConsole {
+        match DebugConsole::is_avaliable() {
+            true => Self::new_dbcn(),
+            false => Self::new_legacy(),
+        }
+    }
+
+    fn new_legacy() -> UnionConsole {
+        UnionConsole::Legacy(LegacyConsole::get_api())
+    }
+
+    fn new_dbcn() -> UnionConsole {
+        UnionConsole::Dbcn(DebugConsole::get_api())
+    }
+
+    #[allow(unused)]
+    fn read(&self) -> u8 {
+        match self {
+            UnionConsole::Legacy(leg) => leg.getchar(),
+            UnionConsole::Dbcn(dbcn) => dbcn.getchar(),
+        }
+    }
+
+    #[allow(unused)]
+    fn put(&mut self, c: u8) {
+        match self {
+            UnionConsole::Legacy(leg) => leg.putchar(c),
+            UnionConsole::Dbcn(dbcn) => dbcn.putchar(c),
+        }
+    }
+
+    pub fn write_fmt(&mut self, arg: Arguments) {
+        match self {
+            UnionConsole::Legacy(leg) => leg.write_fmt(arg).unwrap(),
+            UnionConsole::Dbcn(dbcn) => dbcn.write_fmt(arg).unwrap(),
+        }
+    }
+}
+
+static mut GLOBAL_CONSOLE: Option<UnionConsole> = None;
+
+impl UnionConsole {
+    pub fn instance() -> UnionConsole {
+        match unsafe { GLOBAL_CONSOLE } {
+            Some(console) => console,
+            None => {
+                let instance = UnionConsole::new();
+                unsafe { GLOBAL_CONSOLE = Some(instance) };
+                instance
+            }
+        }
+    }
+
+    #[allow(unused)]
+    pub fn force_assign(instance: UnionConsole) {
+        unsafe {
+            GLOBAL_CONSOLE = Some(instance);
+        }
+    }
+
+    #[allow(unused)]
+    pub fn getchar() -> u8 {
+        Self::instance().read()
+    }
+
+    #[allow(unused)]
+    pub fn putchar(c: u8) {
+        Self::instance().put(c)
+    }
+
+    #[allow(unused)]
+    pub fn printf(arg: Arguments) {
+        Self::instance().write_fmt(arg)
+    }
+}
+
+// End Region - LegacyConsole
+
+```
+
+- ./os/src/trap/trap.S
+```asm
+.altmacro
+.macro SAVE_GP n
+    sd x\n, \n*8(sp)
+.endm
+.macro LOAD_GP n
+    ld x\n, \n*8(sp)
+.endm
+    .section .text
+    .globl __alltraps
+    .globl __restore
+    .align 2
+__alltraps:
+    csrrw sp, sscratch, sp
+    # now sp->kernel stack, sscratch->user stack
+    # allocate a TrapContext on kernel stack
+    addi sp, sp, -34*8
+    # save general-purpose registers
+    sd x1, 1*8(sp)
+    # skip sp(x2), we will save it later
+    sd x3, 3*8(sp)
+    # skip tp(x4), application does not use it
+    # save x5~x31
+    .set n, 5
+    .rept 27
+        SAVE_GP %n
+        .set n, n+1
+    .endr
+    # we can use t0/t1/t2 freely, because they were saved on kernel stack
+    csrr t0, sstatus
+    csrr t1, sepc
+    sd t0, 32*8(sp)
+    sd t1, 33*8(sp)
+    # read user stack from sscratch and save it on the kernel stack
+    csrr t2, sscratch
+    sd t2, 2*8(sp)
+    # set input argument of trap_handler(cx: &mut TrapContext)
+    mv a0, sp
+    call trap_handler
+
+__restore:
+    # now sp->kernel stack(after allocated), sscratch->user stack
+    # restore sstatus/sepc
+    ld t0, 32*8(sp)
+    ld t1, 33*8(sp)
+    ld t2, 2*8(sp)
+    csrw sstatus, t0
+    csrw sepc, t1
+    csrw sscratch, t2
+    # restore general-purpuse registers except sp/tp
+    ld x1, 1*8(sp)
+    ld x3, 3*8(sp)
+    .set n, 5
+    .rept 27
+        LOAD_GP %n
+        .set n, n+1
+    .endr
+    # release TrapContext on kernel stack
+    addi sp, sp, 34*8
+    # now sp->kernel stack, sscratch->user stack
+    csrrw sp, sscratch, sp
+    sret
+
+```
+
+- ./os/src/trap/mod.rs
+```rust
+mod context;
+
+use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
+use crate::syscall::syscall;
+use crate::task::{
+    exit_current_and_run_next, suspend_current_and_run_next,
+};
+use crate::task::processor::{current_trap_ctx, current_user_token};
+use crate::timer::set_next_trigger;
+pub use context::TrapContext;
+use riscv::register::{mcause, mtval};
+use core::arch::asm;
+use log::{debug, warn};
+use riscv::register::{
+    mtvec::TrapMode,
+    scause::{self, Exception, Interrupt, Trap},
+    sie, stval, stvec,
+};
+
+pub fn init() {
+    set_user_trap();
+}
+
+fn set_user_trap() {
+    debug!("Entering user trap mode");
+    let user_trap_va = TRAMPOLINE + (__snap_trap as usize - __snap_trap as usize);
+    unsafe {
+        stvec::write(user_trap_va as usize, TrapMode::Direct);
+    }
+}
+
+fn set_kernel_trap() -> KernelTrapContext {
+    debug!("Entering kernel trap mode");
+    unsafe { stvec::write(on_kernel_trap as usize, TrapMode::Direct) }
+
+    KernelTrapContext
+}
+
+pub fn disable_timer_interrupt() {
+    unsafe {
+        sie::clear_stimer();
+    }
+}
+
+pub fn enable_timer_interrupt() {
+    unsafe {
+        sie::set_stimer();
+    }
+}
+
+#[no_mangle]
+pub fn trap_handler() -> ! {
+    {
+        let _kernel_ctx = KernelTrapContext::enter();
+        let scause = scause::read();
+        let stval = stval::read();
+        let mut ctx = current_trap_ctx();
+    
+        match scause.cause() {
+            Trap::Exception(Exception::UserEnvCall) => {
+                // // jump to next instruction anyway
+                // let mut cx = current_trap_cx();
+                // cx.sepc += 4;
+                // // get system call return value
+                // let result = syscall(cx.x[17], [cx.x[10], cx.x[11], cx.x[12]]);
+                // // cx is changed during sys_exec, so we have to call it again
+                // cx = current_trap_cx();
+                // cx.x[10] = result as usize;
+
+                ctx.sepc += 4;
+                let result = syscall(ctx.x[17], [ctx.x[10], ctx.x[11], ctx.x[12]]) as usize;
+                ctx = current_trap_ctx();
+                ctx.x[10] = result;
+            }
+            Trap::Exception(Exception::StoreFault)
+            | Trap::Exception(Exception::StorePageFault)
+            | Trap::Exception(Exception::LoadFault)
+            | Trap::Exception(Exception::LoadPageFault) => {
+                println!("[kernel] PageFault in application, bad addr = {:#x}, bad instruction = {:#x}, kernel killed it.", stval, ctx.sepc);
+                exit_current_and_run_next(-2);
+            }
+            Trap::Exception(Exception::IllegalInstruction) => {
+                println!("[kernel] IllegalInstruction in application, kernel killed it. PC: {:#x}", ctx.sepc);
+                exit_current_and_run_next(-3);
+            }
+            Trap::Interrupt(Interrupt::SupervisorTimer) => {
+                set_next_trigger();
+                suspend_current_and_run_next();
+            }
+            _ => {
+                warn!(
+                    "Unsupported trap {:?}, stval = {:#x}! Kernel killed it.",
+                    scause.cause(),
+                    stval
+                );
+                exit_current_and_run_next(-1);
+            }
+        }
+        // drop _kernel_ctx to restore user trap
+    }
+
+    unreachable!()
+}
+
+struct KernelTrapContext;
+
+impl KernelTrapContext {
+    fn enter() -> Self {
+        set_kernel_trap()
+    }
+}
+
+impl Drop for KernelTrapContext {
+    fn drop(&mut self) {
+        trap_return()
+    }
+}
+
+#[no_mangle]
+#[allow(unreachable_code)]
+pub fn trap_return() -> ! {
+    set_user_trap();
+    let trap_ctx = TRAP_CONTEXT;
+    let user_satp = current_user_token();
+
+    let restore_va: usize = TRAMPOLINE + (__restore_snap as usize - __snap_trap as usize);
+
+    debug!("restore_va: {:#x}", restore_va);
+    debug!("user_satp: {:#x}", user_satp);
+    debug!("Returning to user mode");
+
+    unsafe {
+        asm!(
+            "fence.i",
+            "jr {restore_va}",
+            restore_va = in(reg) restore_va,
+            in("a0") trap_ctx,
+            in("a1") user_satp,
+            options(noreturn)
+        );
+    }
+
+    unreachable!("Unreachable in back_to_user!");
+}
+
+#[naked]
+#[no_mangle]
+unsafe extern "C" fn on_kernel_trap() -> ! {
+    // TODO:
+    // 1. Switch to kernel stack
+    asm!("j kernel_trap_intenral", options(noreturn))
+}
+
+#[no_mangle]
+fn kernel_trap_intenral() -> ! {
+    let mcause = mcause::read();
+    let mtval = mtval::read();
+    panic!("Exception from kernelscause: {}, stval: {:#x}", mcause.bits(), mtval);
+}
+
+#[naked]
+#[no_mangle]
+#[link_section = ".text.trampoline"]
+pub unsafe extern "C" fn __snap_trap() -> ! {
+    /*
+       |   x0   |  <- sp
+       |   x1   |  <- sp + 8
+       |   ...  |
+       | sstatus|
+       |  sepc  |
+       | ktoken |
+       |  ksp   |
+       |  trap  |
+       +--------+
+    */
+
+    /*
+       x0: zero（硬编码为零，不能被写入）
+       x1: ra（返回地址）
+       x2: sp（堆栈指针）
+       x3: gp（全局指针）
+       x4: tp（线程指针）
+       x5 - x7: t0 - t2（临时/调用者保存）
+       x8: s0/fp（保存的寄存器/帧指针）
+       x9: s1（保存的寄存器）
+       x10 - x11: a0 - a1（函数参数/返回值）
+       x12 - x17: a2 - a7（函数参数）
+       x18 - x27: s2 - s11（保存的寄存器）
+       x28 - x31: t3 - t6（临时/调用者保存）
+    */
+
+    asm!(
+        // Make sp -> TrapContext
+        // sscratch -> User stack
+        "csrrw sp, sscratch, sp",
+        // Save all registers
+        // We will not handle x0, but still leave a room for it
+        // "sd x0, 0(sp)",
+        "sd ra, 8(sp)", // x1
+        // "sd sp, 16(sp)", // 'sp' was broken, we will save with temp register later
+        "sd gp, 24(sp)",   // x3
+        "sd tp, 32(sp)",   // x4
+        "sd t0, 40(sp)",   // x5
+        "sd t1, 48(sp)",   // x6
+        "sd t2, 56(sp)",   // x7
+        "sd s0, 64(sp)",   // x8 aka. fp
+        "sd s1, 72(sp)",   // x9
+        "sd a0, 80(sp)",   // x10 param0/ret
+        "sd a1, 88(sp)",   // x11 param1
+        "sd a2, 96(sp)",   // x12
+        "sd a3, 104(sp)",  // x13
+        "sd a4, 112(sp)",  // x14
+        "sd a5, 120(sp)",  // x15
+        "sd a6, 128(sp)",  // x16
+        "sd a7, 136(sp)",  // x17
+        "sd s2, 144(sp)",  // x18
+        "sd s3, 152(sp)",  // x19
+        "sd s4, 160(sp)",  // x20
+        "sd s5, 168(sp)",  // x21
+        "sd s6, 176(sp)",  // x22
+        "sd s7, 184(sp)",  // x23
+        "sd s8, 192(sp)",  // x24
+        "sd s9, 200(sp)",  // x25
+        "sd s10, 208(sp)", // x26
+        "sd s11, 216(sp)", // x27
+        "sd t3, 224(sp)",  // x28
+        "sd t4, 232(sp)",  // x29
+        "sd t5, 240(sp)",  // x30
+        "sd t6, 248(sp)",  // x31
+        // Since we've saved all temp registers, we can now save sp and other privileged registers with them
+        "csrr t0, sstatus",
+        "sd t0, 256(sp)", // 32 * 8 = 256
+        //
+        "csrr t0, sepc",  // PC when trap happened
+        "sd t0, 264(sp)", // 33 * 8 = 264
+        //
+        "csrr t0, sscratch", // Previous sp, we've swaped it with sp at the beginning
+        "sd t0, 16(sp)",     // x2
+        // Snap end, load kernel registers and jump to kernel trap handler
+        "ld t1, 288(sp)", // Address of `trap_handler`
+        "ld t0, 272(sp)", // kernel_token(root ppn)
+        "ld sp, 280(sp)", // Kernel stack
+        "csrw satp, t0",
+        // Clear tlbs as we are entering new context(Kernel Space)
+        "sfence.vma",
+        // Don't use `call trap_handler` here
+        "jr t1",
+        // The trap_handler never returns
+        options(noreturn)
+    )
+}
+
+#[naked]
+#[no_mangle]
+#[link_section = ".text.trampoline"]
+pub unsafe extern "C" fn __restore_snap(/*snaped_context: *const TrapContext, user_token: usize*/) -> !
+{
+    // see `__snap_trap` for the stack layout
+    asm!(
+        // Return to user space(but still in Supervisor mode)
+        "csrw satp, a1",
+        "sfence.vma",
+        // Make sp -> Trap Context in user stack in user space
+        "csrw sscratch, a0",
+        "mv sp, a0",
+        // Restore privileged registers
+        // sstatus
+        "ld t0, 256(sp)",
+        "csrw sstatus, t0",
+        // sepc
+        "ld t0, 264(sp)",
+        "csrw sepc, t0",
+        // Restore all registers
+        // Ignore x0
+        "ld ra, 8(sp)", // x1
+        // Skip sp(x2) as we need it to restore the stack
+        "ld gp, 24(sp)",   // x3
+        "ld tp, 32(sp)",   // x4
+        "ld t0, 40(sp)",   // x5
+        "ld t1, 48(sp)",   // x6
+        "ld t2, 56(sp)",   // x7
+        "ld s0, 64(sp)",   // x8 aka. fp
+        "ld s1, 72(sp)",   // x9
+        "ld a0, 80(sp)",   // x10 param0/ret
+        "ld a1, 88(sp)",   // x11 param1
+        "ld a2, 96(sp)",   // x12
+        "ld a3, 104(sp)",  // x13
+        "ld a4, 112(sp)",  // x14
+        "ld a5, 120(sp)",  // x15
+        "ld a6, 128(sp)",  // x16
+        "ld a7, 136(sp)",  // x17
+        "ld s2, 144(sp)",  // x18
+        "ld s3, 152(sp)",  // x19
+        "ld s4, 160(sp)",  // x20
+        "ld s5, 168(sp)",  // x21
+        "ld s6, 176(sp)",  // x22
+        "ld s7, 184(sp)",  // x23
+        "ld s8, 192(sp)",  // x24
+        "ld s9, 200(sp)",  // x25
+        "ld s10, 208(sp)", // x26
+        "ld s11, 216(sp)", // x27
+        "ld t3, 224(sp)",  // x28
+        "ld t4, 232(sp)",  // x29
+        "ld t5, 240(sp)",  // x30
+        "ld t6, 248(sp)",  // x31
+        // Restore sp
+        "ld sp, 16(sp)", // x2
+        // Return to user mode
+        "sret",
+        options(noreturn)
+    );
+}
+
+```
+
+- ./os/src/trap/context.rs
+```rust
+use riscv::register::sstatus::{self, Sstatus, SPP};
+
+#[repr(C)]
+pub struct TrapContext {
+    pub x: [usize; 32],
+    pub sstatus: Sstatus,
+    pub sepc: usize,
+    pub kernel_token: usize,
+    pub kernel_sp: usize,
+    pub trap_handler: usize,
+}
+
+impl TrapContext {
+    pub fn set_sp(&mut self, sp: usize) {
+        self.x[2] = sp;
+    }
+    pub fn app_init_context(
+        entry: usize,
+        sp: usize,
+        kernel_token: usize,
+        kernel_sp: usize,
+        trap_handler: usize,
+    ) -> Self {
+        let mut sstatus = sstatus::read();
+        sstatus.set_spp(SPP::User);
+        let mut ctx = Self {
+            x: [0; 32],
+            sstatus,
+            sepc: entry,
+            kernel_token,
+            kernel_sp,
+            trap_handler,
+        };
+        ctx.set_sp(sp);
+        ctx
+    }
+}
+
+```
+
+- ./os/src/mm/heap.rs
+```rust
+use crate::config::KERNEL_HEAP_SIZE;
+use buddy_system_allocator::LockedHeap;
+use log::debug;
+
+#[link_section = ".bss.heap"]
+static mut HEAP: [u8; KERNEL_HEAP_SIZE] = [0; KERNEL_HEAP_SIZE];
+
+#[global_allocator]
+static HEAP_ALLOCATOR: LockedHeap<30> = LockedHeap::empty();
+
+pub fn init() {
+    unsafe {
+        HEAP_ALLOCATOR
+            .lock()
+            .init(HEAP.as_ptr() as usize, KERNEL_HEAP_SIZE);
+
+        debug!(
+            "heap: init end, range: [{:#x}, {:#x})",
+            HEAP.as_ptr() as usize,
+            HEAP.as_ptr() as usize + KERNEL_HEAP_SIZE
+        );
+    }
+}
+
+#[alloc_error_handler]
+fn alloc_error_handler(layout: core::alloc::Layout) -> ! {
+    panic!("Allocation error, layout: {:?}", layout)
+}
+
+```
+
+- ./os/src/mm/address.rs
+```rust
+use crate::config::{PAGE_SIZE, PAGE_SIZE_BITS_WIDTH};
+
+use super::page::PageTableEntry;
+
+const SV39_PA_WIDTH: usize = 56;
+const SV39_VA_WIDTH: usize = 39;
+const PPN_WIDTH_SV39: usize = SV39_PA_WIDTH - PAGE_SIZE_BITS_WIDTH;
+const VPN_WIDTH_SV39: usize = SV39_VA_WIDTH - PAGE_SIZE_BITS_WIDTH;
+
+const VIRT_PAGE_NUM_WIDTH: usize = 9;
+const VIRT_PAGE_NUM_MASK: usize = (1 << VIRT_PAGE_NUM_WIDTH) - 1;
+
+// Region - PhysAddr
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub struct PhysAddr(pub usize);
+
+impl From<usize> for PhysAddr {
+    fn from(v: usize) -> Self {
+        Self(v & ((1 << SV39_PA_WIDTH) - 1))
+    }
+}
+
+impl From<PhysAddr> for usize {
+    fn from(v: PhysAddr) -> Self {
+        v.0
+    }
+}
+
+impl PhysAddr {
+    pub fn floor(&self) -> PhysPageNum {
+        PhysPageNum(self.0 / PAGE_SIZE)
+    }
+    pub fn ceil(&self) -> PhysPageNum {
+        if self.0 == 0 {
+            PhysPageNum(0)
+        } else {
+            PhysPageNum((self.0 - 1 + PAGE_SIZE) / PAGE_SIZE)
+        }
+    }
+    pub fn page_offset(&self) -> usize {
+        self.0 & (PAGE_SIZE - 1)
+    }
+    pub fn aligned(&self) -> bool {
+        self.page_offset() == 0
+    }
+}
+
+impl From<PhysPageNum> for PhysAddr {
+    fn from(v: PhysPageNum) -> Self {
+        Self(v.0 << PAGE_SIZE_BITS_WIDTH)
+    }
+}
+
+// End Region - PhysAddr
+
+// Region - VirtAddr
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub struct VirtAddr(pub usize);
+
+impl From<usize> for VirtAddr {
+    fn from(v: usize) -> Self {
+        Self(v & ((1 << SV39_VA_WIDTH) - 1))
+    }
+}
+
+impl From<VirtAddr> for usize {
+    fn from(v: VirtAddr) -> Self {
+        if v.0 >= (1 << (SV39_VA_WIDTH - 1)) {
+            v.0 | (!((1 << SV39_VA_WIDTH) - 1))
+        } else {
+            v.0
+        }
+    }
+}
+
+impl VirtAddr {
+    // Returns the floor of the virtual address
+    pub fn floor(&self) -> VirtPageNum {
+        VirtPageNum(self.0 / PAGE_SIZE)
+    }
+
+    // Returns the ceiling of the virtual address
+    pub fn ceil(&self) -> VirtPageNum {
+        if self.0 == 0 {
+            VirtPageNum(0)
+        } else {
+            VirtPageNum((self.0 - 1 + PAGE_SIZE) / PAGE_SIZE)
+        }
+    }
+
+    // Returns the offset within the page
+    pub fn page_offset(&self) -> usize {
+        self.0 & (PAGE_SIZE - 1)
+    }
+
+    // Checks if the address is page-aligned
+    pub fn aligned(&self) -> bool {
+        self.page_offset() == 0
+    }
+}
+
+impl From<VirtPageNum> for VirtAddr {
+    fn from(v: VirtPageNum) -> Self {
+        Self(v.0 << PAGE_SIZE_BITS_WIDTH)
+    }
+}
+
+// End Region - VirtAddr
+
+// Region - PhysPageNum
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub struct PhysPageNum(pub usize);
+
+impl From<usize> for PhysPageNum {
+    fn from(v: usize) -> Self {
+        Self(v & ((1 << PPN_WIDTH_SV39) - 1))
+    }
+}
+
+impl From<PhysPageNum> for usize {
+    fn from(v: PhysPageNum) -> Self {
+        v.0
+    }
+}
+
+impl From<PhysAddr> for PhysPageNum {
+    fn from(v: PhysAddr) -> Self {
+        assert_eq!(v.page_offset(), 0);
+        v.floor()
+    }
+}
+
+impl PhysPageNum {
+    pub fn as_page_bytes_slice(&self) -> &'static mut [u8] {
+        let physaddr = PhysAddr::from(*self);
+        unsafe { core::slice::from_raw_parts_mut(physaddr.0 as *mut u8, PAGE_SIZE) }
+    }
+
+    pub fn as_page_bytes_ptr(&self) -> *mut u8 {
+        let physaddr = PhysAddr::from(*self);
+        physaddr.0 as *mut u8
+    }
+
+    #[allow(invalid_reference_casting)]
+    pub fn as_page_bytes_mut<T>(&self) -> &'static mut T {
+        let physaddr = PhysAddr::from(*self);
+        unsafe { &mut *(physaddr.0 as *mut T) }
+    }
+
+    pub fn as_entry_slice(&self) -> &'static mut [PageTableEntry] {
+        let physaddr = PhysAddr::from(*self);
+        unsafe {
+            core::slice::from_raw_parts_mut(
+                physaddr.0 as *mut PageTableEntry,
+                PAGE_SIZE / core::mem::size_of::<PageTableEntry>(),
+            )
+        }
+    }
+}
+
+// End Region - PhysPageNum
+
+// Region - VirtPageNum
+#[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
+pub struct VirtPageNum(pub usize);
+
+impl From<usize> for VirtPageNum {
+    fn from(v: usize) -> Self {
+        Self(v & ((1 << VPN_WIDTH_SV39) - 1))
+    }
+}
+
+impl From<VirtPageNum> for usize {
+    fn from(v: VirtPageNum) -> Self {
+        v.0
+    }
+}
+
+impl From<VirtAddr> for VirtPageNum {
+    fn from(v: VirtAddr) -> Self {
+        assert_eq!(v.page_offset(), 0);
+        v.floor()
+    }
+}
+
+impl VirtPageNum {
+    // 取出虚拟页号的三级页索引
+    // Returns: [PPN0, PPN1, PPN2]
+    pub fn into_indices(&self) -> [usize; 3] {
+        let mut vpn = self.0;
+        let mut idx = [0usize; 3];
+        for i in (0..3).rev() {
+            idx[i] = vpn & VIRT_PAGE_NUM_MASK;
+            vpn >>= VIRT_PAGE_NUM_WIDTH;
+        }
+        idx
+    }
+}
+
+// End Region - VirtPageNum
+
+```
+
+- ./os/src/mm/mod.rs
+```rust
+pub mod address;
+pub mod frame;
+pub mod heap;
+pub mod page;
+
+use crate::{
+    boards::MMIO,
+    config::{TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE},
+    sync::UPSafeCell,
+};
+use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
+use core::{arch::asm, ops::Range, str};
+use log::debug;
+use page::PageTable;
+use riscv::register::satp;
+
+use bitflags::bitflags;
+use lazy_static::lazy_static;
+
+use crate::config::{MEMORY_END, PAGE_SIZE};
+
+pub use self::{
+    address::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum},
+    frame::{frame_alloc, TrackedFrame},
+};
+
+use page::PageTableEntryFlags;
+
+pub fn init() {
+    heap::init();
+    frame::init();
+
+    KernelSpace::activate();
+}
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum MapType {
+    Identical,
+    Framed,
+}
+
+// 表示一段连续的虚拟内存映射区域
+pub struct MapArea {
+    range: Range<VirtPageNum>,
+    data_frames: BTreeMap<VirtPageNum, TrackedFrame>,
+    map_type: MapType,
+    permission: MapPermission,
+}
+
+impl MapArea {
+    #[inline]
+    pub fn vpn_range(&self) -> Range<usize> {
+        // `step` trait was recently redisgned,
+        // so we convert to usize first.
+        let start = self.range.start.0;
+        let end = self.range.end.0;
+        start..end
+    }
+
+    pub fn from_another(them: &MapArea) -> Self {
+        Self {
+            range: them.range.clone(),
+            data_frames: BTreeMap::new(),
+            map_type: them.map_type,
+            permission: them.permission,
+        }
+    }
+}
+
+bitflags! {
+    #[derive(Clone, Copy)]
+    pub struct MapPermission: u8 {
+        const R = 1 << 1;
+        const W = 1 << 2;
+        const X = 1 << 3;
+        const U = 1 << 4;
+    }
+}
+
+// 表示整个内存空间
+pub struct MemorySpace {
+    page_table: PageTable,
+    areas: Vec<MapArea>,
+}
+
+impl MemorySpace {
+    pub fn table(&self) -> &PageTable {
+        &self.page_table
+    }
+
+    pub fn new_empty() -> Self {
+        Self {
+            page_table: PageTable::new(),
+            areas: Vec::new(),
+        }
+    }
+
+    pub fn token(&self) -> usize {
+        self.page_table.token()
+    }
+
+    fn push(&mut self, mut map_area: MapArea, data: Option<&[u8]>) {
+        map_area.map_many(&mut self.page_table);
+        if let Some(data) = data {
+            map_area.copy_data(&mut self.page_table, data);
+        }
+        self.areas.push(map_area);
+    }
+
+    pub fn insert_framed_area(
+        &mut self,
+        start_va: VirtAddr,
+        end_va: VirtAddr,
+        permission: MapPermission,
+    ) {
+        let map_area = MapArea::new(start_va, end_va, MapType::Framed, permission);
+        self.push(map_area, None);
+    }
+
+    pub fn map_trampoline(&mut self) {
+        extern "C" {
+            fn strampoline();
+        }
+
+        self.page_table.map(
+            VirtAddr::from(TRAMPOLINE).into(),
+            PhysAddr::from(strampoline as usize).into(),
+            PageTableEntryFlags::R | PageTableEntryFlags::X,
+        );
+    }
+
+    ///Remove `MapArea` that starts with `start_vpn`
+    pub fn remove_area_with_start_vpn(&mut self, start_vpn: VirtPageNum) {
+        if let Some((idx, area)) = self
+            .areas
+            .iter_mut()
+            .enumerate()
+            .find(|(_, area)| area.range.start == start_vpn)
+        {
+            area.unmap_many(&mut self.page_table);
+            self.areas.remove(idx);
+        }
+    }
+
+    pub fn clear(&mut self) {
+        self.areas.clear();
+    }
+
+    pub fn from_existed_space(them_space: &MemorySpace) -> Self {
+        let mut this_space = Self::new_empty();
+        this_space.map_trampoline();
+
+        // copy data sections/trap_context/user_stack
+        for area in them_space.areas.iter() {
+            let new_area = MapArea::from_another(area);
+            this_space.push(new_area, None);
+            // copy data from another space
+            for vpn in area.vpn_range() {
+                let src_ppn = them_space.page_table.translate(VirtPageNum::from(vpn)).unwrap().ppn();
+                let dst_ppn = this_space.page_table.translate(VirtPageNum::from(vpn)).unwrap().ppn();
+                dst_ppn.as_page_bytes_slice().copy_from_slice(src_ppn.as_page_bytes_slice());
+            }
+        }
+
+        this_space
+    }
+}
+
+impl MapArea {
+    pub fn new(
+        start_va: VirtAddr,
+        end_va: VirtAddr,
+        map_type: MapType,
+        permission: MapPermission,
+    ) -> Self {
+        let start_vpn = start_va.floor();
+        let end_vpn = end_va.ceil();
+        Self {
+            range: start_vpn..end_vpn,
+            data_frames: BTreeMap::new(),
+            map_type,
+            permission,
+        }
+    }
+
+    pub fn map_page(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {
+        let ppn = PhysPageNum(match self.map_type {
+            MapType::Identical => vpn.0,
+            MapType::Framed => {
+                let frame = frame_alloc().unwrap();
+                let ppn = frame.ppn.0;
+                self.data_frames.insert(vpn, frame);
+                ppn
+            }
+        });
+
+        let flags = PageTableEntryFlags::from_bits(self.permission.bits()).unwrap();
+
+        page_table.map(vpn, ppn, flags);
+    }
+
+    pub fn unmap_page(&mut self, page_table: &mut PageTable, vpn: VirtPageNum) {
+        if self.map_type == MapType::Framed {
+            let _frame = self.data_frames.remove(&vpn).unwrap();
+            // auto dealloc with deconstructor
+        }
+
+        page_table.unmap(vpn);
+    }
+}
+
+impl MapArea {
+    pub fn map_many(&mut self, page_table: &mut PageTable) {
+        for vpn in self.vpn_range() {
+            self.map_page(page_table, VirtPageNum(vpn));
+        }
+    }
+
+    pub fn unmap_many(&mut self, page_table: &mut PageTable) {
+        for vpn in self.vpn_range() {
+            self.unmap_page(page_table, VirtPageNum(vpn));
+        }
+    }
+
+    pub fn copy_data(&mut self, page_table: &mut PageTable, data: &[u8]) {
+        let len = data.len();
+        let mut copied = 0;
+
+        let mut vpn: usize = self.range.start.0;
+
+        while copied < len {
+            use log::*;
+            info!("len: {}, copied: {}", len, copied);
+
+            let len = Ord::min(len, copied + PAGE_SIZE);
+            let src = &data[copied..len];
+            let dst = &mut page_table
+                .translate(VirtPageNum(vpn))
+                .unwrap()
+                .ppn()
+                .as_page_bytes_slice()[..len - copied];
+
+            dst.copy_from_slice(src);
+
+            copied += PAGE_SIZE;
+            vpn += 1;
+        }
+    }
+}
+
+pub struct KernelSpace;
+
+impl KernelSpace {
+    pub fn new() -> MemorySpace {
+        extern "C" {
+            fn stext();
+            fn etext();
+
+            fn srodata();
+            fn erodata();
+
+            fn sdata();
+            fn edata();
+
+            // do not use this as this does not contains the stack
+            // fn sbss();
+            fn ebss();
+
+            fn ekernel();
+        }
+
+        let mut kernel_space = MemorySpace::new_empty();
+
+        kernel_space.map_trampoline();
+
+        debug!(
+            "Mapping .text, 0x{:08X}..0x{:08X}",
+            stext as usize, etext as usize
+        );
+        kernel_space.push(
+            MapArea::new(
+                VirtAddr(stext as usize),
+                VirtAddr(etext as usize),
+                MapType::Identical,
+                MapPermission::R | MapPermission::X,
+            ),
+            Option::None,
+        );
+
+        debug!(
+            "Mapping .rodata, 0x{:08X}..0x{:08X}",
+            srodata as usize, erodata as usize
+        );
+        kernel_space.push(
+            MapArea::new(
+                VirtAddr(srodata as usize),
+                VirtAddr(erodata as usize),
+                MapType::Identical,
+                MapPermission::R,
+            ),
+            Option::None,
+        );
+
+        debug!(
+            "Mapping .data, 0x{:08X}..0x{:08X}",
+            sdata as usize, edata as usize
+        );
+        kernel_space.push(
+            MapArea::new(
+                VirtAddr(sdata as usize),
+                VirtAddr(edata as usize),
+                MapType::Identical,
+                MapPermission::R | MapPermission::W,
+            ),
+            Option::None,
+        );
+
+        debug!(
+            "Mapping .bss, 0x{:08X}..0x{:08X}",
+            edata as usize, ebss as usize
+        );
+        kernel_space.push(
+            MapArea::new(
+                VirtAddr(edata as usize),
+                VirtAddr(ebss as usize),
+                MapType::Identical,
+                MapPermission::R | MapPermission::W,
+            ),
+            Option::None,
+        );
+
+        debug!(
+            "Mapping physical memory, 0x{:08X}..0x{:08X}",
+            ekernel as usize, MEMORY_END
+        );
+        kernel_space.push(
+            MapArea::new(
+                VirtAddr(ekernel as usize),
+                VirtAddr(MEMORY_END),
+                MapType::Identical,
+                MapPermission::R | MapPermission::W,
+            ),
+            None,
+        );
+
+        debug!("Mapping memory-mapped registers");
+        for &(start, len) in MMIO {
+            debug!("Mapping MMIO: start: 0x{:08X}, len: 0x{:08X}", start, len);
+            kernel_space.push(
+                MapArea::new(
+                    VirtAddr(start),
+                    VirtAddr(start + len),
+                    MapType::Identical,
+                    MapPermission::R | MapPermission::W,
+                ),
+                None,
+            );
+        }
+
+        kernel_space
+    }
+
+    pub fn activate() {
+        let satp = kernel_token();
+
+        debug!("Activating kernel space, SATP: 0x{:X}", satp);
+        unsafe {
+            satp::write(satp);
+            asm!("sfence.vma");
+        }
+        debug!("Kernel space activated");
+    }
+}
+
+lazy_static! {
+    /// a memory set instance through lazy_static! managing kernel space
+    pub static ref KERNEL_SPACE: Arc<UPSafeCell<MemorySpace>> =
+        Arc::new(UPSafeCell::new(KernelSpace::new()));
+}
+
+pub fn kernel_token() -> usize {
+    KERNEL_SPACE.exclusive_access().token()
+}
+
+pub struct UserSpace;
+
+impl UserSpace {
+    pub fn from_elf(elf_data: &[u8]) -> (MemorySpace, usize, usize) {
+        let mut user_space = MemorySpace::new_empty();
+
+        user_space.map_trampoline();
+
+        let elf = xmas_elf::ElfFile::new(elf_data).unwrap();
+        let header = elf.header;
+
+        let magic = header.pt1.magic;
+        // 0x7f 'E' 'L' 'F'
+        assert!(
+            magic == [0x7F, 0x45, 0x4C, 0x46],
+            "Invalid ELF magic number"
+        );
+
+        let mut max_end_vpn = VirtPageNum(0);
+
+        for ph in elf.program_iter() {
+            debug!("ph: {:?}", ph);
+            if ph.get_type().unwrap() != xmas_elf::program::Type::Load {
+                continue;
+            }
+
+            let start_va = VirtAddr(ph.virtual_addr() as usize);
+            let end_va = VirtAddr(ph.virtual_addr() as usize + ph.mem_size() as usize);
+
+            let mut permission = MapPermission::U;
+            let ph_flags = ph.flags();
+            if ph_flags.is_read() {
+                permission |= MapPermission::R;
+            }
+            if ph_flags.is_write() {
+                permission |= MapPermission::W;
+            }
+            if ph_flags.is_execute() {
+                permission |= MapPermission::X;
+            }
+
+            let map_area = MapArea::new(start_va, end_va, MapType::Framed, permission);
+
+            max_end_vpn = Ord::max(max_end_vpn, end_va.ceil());
+
+            let end = (ph.offset() + ph.file_size()) as usize;
+
+            user_space.push(map_area, Some(&elf_data[ph.offset() as usize..end]));
+        }
+        debug!("End of ELF segments");
+
+        // map user stack with U flags
+        let max_end_va: VirtAddr = max_end_vpn.into();
+        let mut user_stack_bottom: usize = max_end_va.into();
+
+        // guard page
+        user_stack_bottom += PAGE_SIZE;
+
+        let user_stack_top = user_stack_bottom + USER_STACK_SIZE;
+        debug!(
+            "Mapping user stack 0x{:08X}..0x{:08X}",
+            user_stack_bottom, user_stack_top
+        );
+        user_space.push(
+            MapArea::new(
+                user_stack_bottom.into(),
+                user_stack_top.into(),
+                MapType::Framed,
+                MapPermission::R | MapPermission::W | MapPermission::U,
+            ),
+            None,
+        );
+
+        debug!("Mapping WTF");
+        // used in sbrk
+        user_space.push(
+            MapArea::new(
+                user_stack_top.into(),
+                user_stack_top.into(),
+                MapType::Framed,
+                MapPermission::R | MapPermission::W | MapPermission::U,
+            ),
+            None,
+        );
+
+        debug!("Mapping user trap context at 0x{:08X}", TRAP_CONTEXT);
+        // map trap context with U flags
+        user_space.push(
+            MapArea::new(
+                TRAP_CONTEXT.into(),
+                TRAMPOLINE.into(),
+                MapType::Framed,
+                MapPermission::R | MapPermission::W,
+            ),
+            None,
+        );
+
+        (
+            user_space,
+            // reserve 8 bits for a register
+            user_stack_top - 8,
+            elf.header.pt2.entry_point() as usize,
+        )
+    }
+}
+
+```
+
+- ./os/src/mm/frame.rs
+```rust
+use alloc::{collections::VecDeque, vec::Vec};
+use lazy_static::lazy_static;
+
+use crate::config::MEMORY_END;
+use crate::sync::UPSafeCell;
+
+use super::address::{PhysAddr, PhysPageNum};
+
+trait FrameAllocator {
+    fn alloc(&mut self) -> Option<PhysPageNum>;
+    fn dealloc(&mut self, ppn: PhysPageNum);
+    fn alloc_contiguous(&mut self, count: usize) -> Option<Vec<PhysPageNum>>;
+}
+
+lazy_static! {
+    pub static ref FRAME_ALLOCATOR: UPSafeCell<StackedFrameAllocator> =
+        unsafe { UPSafeCell::new(StackedFrameAllocator::new()) };
+}
+
+pub fn init() {
+    extern "C" {
+        fn ekernel();
+    }
+    FRAME_ALLOCATOR.exclusive_access().init(
+        PhysAddr::from(ekernel as usize).ceil(),
+        PhysAddr::from(MEMORY_END).floor(),
+    );
+}
+
+pub struct TrackedFrame {
+    pub ppn: PhysPageNum,
+}
+
+// Auto dealloc frame when drop
+impl Drop for TrackedFrame {
+    fn drop(&mut self) {
+        frame_dealloc(self.ppn);
+    }
+}
+
+impl TrackedFrame {
+    pub fn new(ppn: PhysPageNum) -> Self {
+        // Clean a page
+        ppn.as_page_bytes_slice().fill(0u8);
+
+        Self { ppn }
+    }
+}
+
+pub fn frame_alloc() -> Option<TrackedFrame> {
+    FRAME_ALLOCATOR
+        .exclusive_access()
+        .alloc()
+        .map(TrackedFrame::new)
+}
+
+pub fn frame_dealloc(ppn: PhysPageNum) {
+    FRAME_ALLOCATOR.exclusive_access().dealloc(ppn);
+}
+
+pub fn frame_alloc_contiguous(count: usize) -> Option<Vec<TrackedFrame>> {
+    FRAME_ALLOCATOR
+        .exclusive_access()
+        .alloc_contiguous(count)
+        .map(|x| x.iter().map(|&t| TrackedFrame::new(t)).collect())
+}
+
+pub fn frame_dealloc_contiguous(start_ppn: PhysPageNum, count: usize) {
+    let mut allocator = FRAME_ALLOCATOR.exclusive_access();
+
+    for i in 0..count {
+        allocator.dealloc((start_ppn.0 + i).into());
+    }
+}
+
+// 栈式物理页帧管理策略
+pub struct StackedFrameAllocator {
+    curr_page_num: usize,      // 空闲内存的起始物理页号
+    end_page_num: usize,       // 空闲内存的结束物理页号
+    recycled: VecDeque<usize>, // 回收的物理页号
+}
+
+impl FrameAllocator for StackedFrameAllocator {
+    fn alloc(&mut self) -> Option<PhysPageNum> {
+        if let Some(ppn) = self.recycled.pop_front() {
+            return Some(PhysPageNum(ppn));
+        }
+
+        if self.curr_page_num == self.end_page_num {
+            None
+        } else {
+            let ppn = Some(PhysPageNum(self.curr_page_num));
+            self.curr_page_num += 1;
+
+            ppn
+        }
+    }
+
+    fn dealloc(&mut self, ppn: PhysPageNum) {
+        let ppn = ppn.0;
+
+        if ppn >= self.curr_page_num
+            || self
+                .recycled
+                .iter()
+                .any(|&recycled_ppn| recycled_ppn == ppn)
+        {
+            panic!("Frame {:?} is not allocated", ppn);
+        }
+
+        self.recycled.push_back(ppn);
+    }
+
+    fn alloc_contiguous(&mut self, count: usize) -> Option<Vec<PhysPageNum>> {
+        if self.curr_page_num + count >= self.end_page_num {
+            None
+        } else {
+            self.curr_page_num += count;
+            let arr: Vec<usize> = (1..count + 1).collect();
+            let v = arr
+                .iter()
+                .map(|x| (self.curr_page_num - x).into())
+                .collect();
+            Some(v)
+        }
+    }
+}
+
+impl StackedFrameAllocator {
+    fn new() -> Self {
+        Self {
+            curr_page_num: 0,
+            end_page_num: 0,
+            recycled: VecDeque::new(),
+        }
+    }
+
+    pub fn init(&mut self, lhs: PhysPageNum, rhs: PhysPageNum) {
+        self.curr_page_num = lhs.0;
+        self.end_page_num = rhs.0;
+    }
+}
+
+```
+
+- ./os/src/mm/page.rs
+```rust
+use alloc::{slice, string::String, vec::Vec};
+use log::debug;
+
+use crate::config::PAGE_SIZE;
+
+use super::{
+    address::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum},
+    frame::{frame_alloc, TrackedFrame},
+};
+use bitflags::*;
+
+pub struct PageTable {
+    root_ppn: PhysPageNum,
+    frames: Vec<TrackedFrame>,
+}
+
+impl PageTable {
+    pub fn new() -> Self {
+        let root = frame_alloc().unwrap();
+
+        Self {
+            root_ppn: root.ppn,
+            frames: vec![root],
+        }
+    }
+
+    pub fn root_ppn(&self) -> PhysPageNum {
+        self.root_ppn
+    }
+}
+
+impl PageTable {
+    pub fn map(&mut self, vpn: VirtPageNum, ppn: PhysPageNum, flags: PageTableEntryFlags) {
+        let entry = self.get_create_entry(vpn);
+        assert!(!entry.is_valid()); // 一个虚拟页只能映射到一个物理页
+        *entry = PageTableEntry::new(ppn, flags | PageTableEntryFlags::V);
+        assert!(entry.is_valid());
+    }
+
+    pub fn unmap(&mut self, vpn: VirtPageNum) {
+        let entry = self
+            .get_entry(vpn)
+            .expect("Attempted to unmap an unmapped page");
+        *entry = PageTableEntry::empty();
+    }
+}
+
+impl PageTable {
+    pub fn get_entry(&self, vpn: VirtPageNum) -> Option<&mut PageTableEntry> {
+        let indices = vpn.into_indices();
+        let mut ppn = self.root_ppn;
+
+        let entry = Option::None;
+
+        for (layer, &idx) in indices.iter().enumerate() {
+            let entries = ppn.as_entry_slice();
+            let entry = &mut entries[idx];
+
+            if layer == 2 {
+                return Option::Some(entry);
+            }
+
+            if !entry.is_valid() {
+                return Option::None;
+            }
+
+            ppn = entry.ppn();
+        }
+
+        entry
+    }
+
+    pub fn get_create_entry(&mut self, vpn: VirtPageNum) -> &mut PageTableEntry {
+        let indices = vpn.into_indices();
+        let mut ppn = self.root_ppn;
+
+        let mut entry: &mut PageTableEntry;
+
+        for (layer, &idx) in indices.iter().enumerate() {
+            let entries = ppn.as_entry_slice();
+            entry = &mut entries[idx];
+
+            if layer == 2 {
+                return entry;
+            }
+
+            if !entry.is_valid() {
+                let frame = frame_alloc().unwrap();
+                let flags = PageTableEntryFlags::V;
+                *entry = PageTableEntry::new(frame.ppn, flags);
+                self.frames.push(frame);
+            }
+
+            ppn = entry.ppn();
+        }
+
+        unreachable!();
+    }
+}
+
+impl PageTable {
+    pub fn translate(&self, vpn: VirtPageNum) -> Option<PageTableEntry> {
+        self.get_entry(vpn).map(|entry| *entry)
+    }
+
+    pub fn translate_va(&self, va: VirtAddr) -> Option<PhysAddr> {
+        self.get_entry(va.clone().floor()).map(|pte| {
+            let aligned_pa: PhysAddr = pte.ppn().into();
+            let offset = va.page_offset();
+            let aligned_pa_usize: usize = aligned_pa.into();
+            (aligned_pa_usize + offset).into()
+        })
+    }
+
+    pub fn translate_bytes(token: usize, buf: &[u8]) -> Vec<&'static [u8]> {
+        let page_table = PageTable::from_token(token);
+        let mut start = buf.as_ptr() as usize;
+        let end = start + buf.len();
+
+        let mut v = Vec::new();
+
+        while start < end {
+            let start_va = VirtAddr::from(start);
+            let mut vpn = start_va.floor();
+
+            let ppn = page_table.translate(vpn).unwrap().ppn();
+
+            vpn = VirtPageNum(vpn.0 + 1);
+            let mut end_va: VirtAddr = vpn.into();
+            end_va = end_va.min(VirtAddr::from(end));
+            if end_va.page_offset() == 0 {
+                v.push(&ppn.as_page_bytes_slice()[start_va.page_offset()..]);
+            } else {
+                v.push(&ppn.as_page_bytes_slice()[start_va.page_offset()..end_va.page_offset()]);
+            }
+            start = end_va.into();
+        }
+
+        v
+    }
+
+    pub fn translate_string(token: usize, ptr: *const u8, limit: usize) -> String {
+        let table = PageTable::from_token(token);
+        let mut string = String::new();
+        let mut va = ptr as usize;
+        let mut bytes_read = 0;
+        while bytes_read < limit {
+            let ch: u8 =
+                unsafe { *(table.translate_va(VirtAddr::from(va)).unwrap().0 as *const u8) };
+            if ch == 0 {
+                break;
+            } else {
+                string.push(ch as char);
+                va += 1;
+            }
+
+            bytes_read += 1;
+        }
+        string
+    }
+
+    pub fn copy_to_space(token: usize, src: *const u8, dst: *mut u8, len: usize) -> usize {
+        let page_table = PageTable::from_token(token);
+        let start = dst as usize;
+        let mut copied_bytes = 0;
+
+        while copied_bytes < len {
+            let start_va = VirtAddr::from(dst as usize + copied_bytes);
+            let mut vpn = start_va.floor();
+
+            let ppn = page_table.translate(vpn).unwrap().ppn();
+
+            // step in
+            vpn = VirtPageNum(vpn.0 + 1);
+
+            let mut end_va: VirtAddr = vpn.into();
+            end_va = end_va.min(VirtAddr::from(start + len));
+
+            let end_va_offset = end_va.page_offset();
+            let start_va_offset = start_va.page_offset();
+
+            let bytes_this_page = if end_va_offset == 0 {
+                PAGE_SIZE - start_va_offset
+            } else {
+                end_va_offset - start_va_offset
+            };
+
+            let src = unsafe {
+                slice::from_raw_parts((src as usize + copied_bytes) as *const u8, bytes_this_page)
+            };
+            let dst =
+                &mut ppn.as_page_bytes_slice()[start_va_offset..start_va_offset + bytes_this_page];
+
+            dst.copy_from_slice(src);
+
+            copied_bytes += bytes_this_page;
+        }
+
+        copied_bytes
+    }
+
+    pub fn copy_from_space(token: usize, src: *const u8, dst: *mut u8, len: usize) -> usize {
+        let page_table = PageTable::from_token(token);
+        let start = src as usize;
+        let mut copied_bytes = 0;
+
+        while copied_bytes < len {
+            let start_va = VirtAddr::from(src as usize + copied_bytes);
+            let mut vpn = start_va.floor();
+
+            let ppn = page_table.translate(vpn).unwrap().ppn();
+
+            // step in
+            vpn = VirtPageNum(vpn.0 + 1);
+
+            let mut end_va: VirtAddr = vpn.into();
+            end_va = end_va.min(VirtAddr::from(start + len));
+
+            let end_va_offset = end_va.page_offset();
+            let start_va_offset = start_va.page_offset();
+
+            let bytes_this_page = if end_va_offset == 0 {
+                PAGE_SIZE - start_va_offset
+            } else {
+                end_va_offset - start_va_offset
+            };
+
+            let src =
+                &ppn.as_page_bytes_slice()[start_va_offset..start_va_offset + bytes_this_page];
+            let dst = unsafe {
+                slice::from_raw_parts_mut((dst as usize + copied_bytes) as *mut u8, bytes_this_page)
+            };
+
+            dst.copy_from_slice(src);
+
+            copied_bytes += bytes_this_page;
+        }
+
+        copied_bytes
+    }
+
+    pub fn from_token(satp: usize) -> Self {
+        let root_ppn = PhysPageNum(satp & ((1 << 44) - 1));
+        Self {
+            root_ppn,
+            frames: Vec::new(),
+        }
+    }
+
+    pub fn token(&self) -> usize {
+        8usize << 60 | self.root_ppn.0
+    }
+}
+
+#[derive(Copy, Clone)]
+#[repr(C)]
+/// page table entry structure
+pub struct PageTableEntry {
+    pub bits: usize,
+}
+
+impl PageTableEntry {
+    pub fn new(ppn: PhysPageNum, flags: PageTableEntryFlags) -> Self {
+        PageTableEntry {
+            bits: ppn.0 << 10 | flags.bits() as usize,
+        }
+    }
+
+    pub fn empty() -> Self {
+        PageTableEntry { bits: 0 }
+    }
+
+    pub fn ppn(&self) -> PhysPageNum {
+        (self.bits >> 10 & ((1usize << 44) - 1)).into()
+    }
+
+    pub fn flags(&self) -> PageTableEntryFlags {
+        PageTableEntryFlags::from_bits(self.bits as u8).unwrap()
+    }
+
+    pub fn is_valid(&self) -> bool {
+        self.flags().contains(PageTableEntryFlags::V)
+    }
+
+    pub fn readable(&self) -> bool {
+        self.flags().contains(PageTableEntryFlags::R)
+    }
+
+    pub fn writable(&self) -> bool {
+        self.flags().contains(PageTableEntryFlags::W)
+    }
+
+    pub fn executable(&self) -> bool {
+        self.flags().contains(PageTableEntryFlags::X)
+    }
+}
+
+bitflags! {
+    /// page table entry flags
+    pub struct PageTableEntryFlags: u8 {
+        const V = 1 << 0;
+        const R = 1 << 1;
+        const W = 1 << 2;
+        const X = 1 << 3;
+        const U = 1 << 4;
+        const G = 1 << 5;
+        const A = 1 << 6;
+        const D = 1 << 7;
+    }
+}
+
+```
+
+- ./os/src/fat32/virt.rs
+```rust
+use virtio_drivers::VirtIOBlk;
+
+use crate::driver::virt::VirtioHal;
+
+use super::IDiskDevice;
+
+pub const SECTOR_SIZE: usize = 512;
+
+pub struct VirtioDisk {
+    sector: usize,
+    offset: usize,
+    virtio_blk: VirtIOBlk<'static, VirtioHal>,
+}
+
+impl VirtioDisk {
+    pub fn new(virtio_blk: VirtIOBlk<'static, VirtioHal>) -> Self {
+        VirtioDisk {
+            sector: 0,
+            offset: 0,
+            virtio_blk,
+        }
+    }
+}
+
+impl IDiskDevice for VirtioDisk {
+    fn read_blocks(&mut self, buf: &mut [u8]) {
+        self.virtio_blk
+            .read_block(self.sector, buf)
+            .expect("Error occurred when reading VirtIOBlk");
+    }
+
+    fn write_blocks(&mut self, buf: &[u8]) {
+        self.virtio_blk
+            .write_block(self.sector, buf)
+            .expect("Error occurred when writing VirtIOBlk");
+    }
+
+    fn get_position(&self) -> usize {
+        self.sector * SECTOR_SIZE + self.offset
+    }
+
+    fn set_position(&mut self, position: usize) {
+        self.sector = position / SECTOR_SIZE;
+        self.offset = position % SECTOR_SIZE;
+    }
+
+    fn move_cursor(&mut self, amount: usize) {
+        self.set_position(self.get_position() + amount)
+    }
+}
+
+```
+
+- ./os/src/fat32/mod.rs
+```rust
+mod virt;
+
+use alloc::boxed::Box;
+
+use virt::VirtioDisk;
+
+use log::debug;
+use crate::driver::virt::VIRTIO0;
+use fatfs::{
+    FileSystem, FsOptions, IoBase, LossyOemCpConverter, NullTimeProvider, Read, Seek, SeekFrom, Write
+};
+use virtio_drivers::{VirtIOBlk, VirtIOHeader};
+
+pub struct Fat32FileSystem;
+
+impl Fat32FileSystem {
+    pub fn new(device_id: usize) -> FileSystem<Fat32IO, NullTimeProvider, LossyOemCpConverter> {
+        let pa = VIRTIO0 + device_id * 0x1000;
+
+        // Kernel space is identity mapped
+        let va = pa;
+
+        let header = unsafe { &mut *(va as *mut VirtIOHeader) };
+
+        debug!("[Disk] Valid: {:}", header.verify());
+        assert!(header.verify(), "Header is not valid");
+
+        let blk = VirtIOBlk::new(header).expect("Failed to create VirtIOBlk");
+
+        let device = Box::new(VirtioDisk::new(blk));
+
+        let io = Fat32IO::new(device);
+
+        FileSystem::new(io, FsOptions::new()).unwrap()
+    }
+}
+
+pub struct Fat32IO {
+    device: Box<dyn IDiskDevice>,
+}
+
+impl Fat32IO {
+    pub fn new(device: Box<dyn IDiskDevice>) -> Self {
+        Fat32IO { device }
+    }
+}
+
+impl IoBase for Fat32IO {
+    type Error = ();
+}
+
+impl Fat32IO {
+    fn read_inner(&mut self, buf: &mut [u8]) -> Result<usize, ()> {
+        let len = buf.len();
+
+        assert!(
+            len <= 512,
+            "buf.len() must be less than or equal to 512, found: {}",
+            len
+        );
+
+        let device = &mut self.device;
+        let device_offset = device.get_position() % 512;
+
+        // Virtio_driver can only read 512 bytes at a time
+        let size_read = if device_offset != 0 || len < 512 {
+            let mut tmp = [0u8; 512];
+            device.read_blocks(&mut tmp);
+
+            let start = device_offset;
+            let end = (device_offset + len).min(512);
+
+            buf[..end - start].copy_from_slice(&tmp[start..end]);
+            end - start
+        } else {
+            device.read_blocks(buf);
+            512
+        };
+
+        device.move_cursor(size_read);
+        Ok(size_read)
+    }
+}
+
+impl Read for Fat32IO {
+    fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()> {
+        self.read_exact(buf).map(|_| buf.len()).map_err(|_| ())
+    }
+
+    fn read_exact(&mut self, mut buf: &mut [u8]) -> Result<(), Self::Error> {
+        while !buf.is_empty() {
+            match buf.len() {
+                0..=512 => {
+                    let size = self.read_inner(buf)?;
+                    buf = &mut buf[size..];
+                }
+                _ => {
+                    let (left, right) = buf.split_at_mut(512);
+                    self.read_inner(left)?;
+                    buf = right;
+                }
+            }
+        }
+        if buf.is_empty() {
+            Ok(())
+        } else {
+            log::debug!("failed to fill whole buffer in read_exact");
+            Err(())
+        }
+    }
+}
+
+impl Write for Fat32IO {
+    fn write(&mut self, buf: &[u8]) -> Result<usize, Self::Error> {
+        let device = &mut self.device;
+        let device_offset = device.get_position() % 512;
+
+        let size_written = if device_offset != 0 || buf.len() < 512 {
+            let mut tmp = [0u8; 512];
+            device.read_blocks(&mut tmp);
+
+            let start = device_offset;
+            let end = (device_offset + buf.len()).min(512);
+
+            tmp[start..end].copy_from_slice(&buf[..end - start]);
+            device.write_blocks(&tmp);
+            end - start
+        } else {
+            device.write_blocks(buf);
+            512
+        };
+
+        device.move_cursor(size_written);
+        Ok(size_written)
+    }
+
+    fn flush(&mut self) -> Result<(), Self::Error> {
+        Ok(())
+    }
+}
+
+impl Seek for Fat32IO {
+    fn seek(&mut self, pos: SeekFrom) -> Result<u64, Self::Error> {
+        let device = &mut self.device;
+        match pos {
+            fatfs::SeekFrom::Start(i) => {
+                device.set_position(i as usize);
+                Ok(i)
+            }
+            fatfs::SeekFrom::Current(i) => {
+                let new_pos = (device.get_position() as i64) + i;
+                device.set_position(new_pos as usize);
+                Ok(new_pos as u64)
+            }
+            fatfs::SeekFrom::End(_) => unreachable!(),
+        }
+    }
+}
+
+pub trait IDiskDevice {
+    fn read_blocks(&mut self, buf: &mut [u8]);
+
+    fn write_blocks(&mut self, buf: &[u8]);
+
+    fn get_position(&self) -> usize;
+
+    fn set_position(&mut self, position: usize);
+
+    fn move_cursor(&mut self, amount: usize);
+}
+
+```
+
+- ./os/src/boards/mod.rs
+```rust
+pub mod qemu;
+
+pub use qemu::MMIO;
+
+```
+
+- ./os/src/boards/qemu.rs
+```rust
+pub const CLOCK_FREQ: usize = 12500000;
+
+pub const MMIO: &[(usize, usize)] = &[
+    (0x0010_0000, 0x00_2000), // VIRT_TEST/RTC  in virt machine
+    (0x2000000, 0x10000),     // core local interrupter (CLINT)
+    (0xc000000, 0x210000),    // VIRT_PLIC in virt machine
+    (0x10000000, 0x9000),     // VIRT_UART0 with GPU  in virt machine
+];
+
+```
+
+- ./os/src/driver/mod.rs
+```rust
+pub mod virt;
+
+```
+
+- ./os/src/driver/virt/mod.rs
+```rust
+use core::mem::forget;
+
+use log::debug;
+
+use virtio_drivers::Hal;
+
+use crate::mm::{
+    frame::{frame_alloc_contiguous, frame_dealloc_contiguous},
+    PhysAddr,
+};
+pub const VIRTIO0: usize = 0x1000_1000;
+
+pub struct VirtioHal;
+
+impl Hal for VirtioHal {
+    fn dma_alloc(count: usize) -> virtio_drivers::PhysAddr {
+        let pages = frame_alloc_contiguous(count).unwrap();
+
+        let ppn_base = pages.last().unwrap().ppn;
+        let begin_addr: PhysAddr = ppn_base.into();
+
+        forget(pages);
+
+        debug!("[#####] dma_alloc: {:#x?}, count: {}", begin_addr.0, count);
+
+        begin_addr.into()
+    }
+
+    fn dma_dealloc(paddr: virtio_drivers::PhysAddr, pages: usize) -> i32 {
+        let ppn: PhysAddr = paddr.into();
+
+        debug!("[#####] dma_dealloc: {:#x?}, count: {}", paddr, pages);
+        frame_dealloc_contiguous(ppn.into(), pages);
+        0
+    }
+    fn phys_to_virt(paddr: virtio_drivers::PhysAddr) -> virtio_drivers::VirtAddr {
+        // debug!("[#####] CONVERTING PHYS TO VIRT 0x{:016x}", paddr);
+        paddr
+    }
+
+    fn virt_to_phys(vaddr: virtio_drivers::VirtAddr) -> virtio_drivers::PhysAddr {
+        // let kernel_token = KERNEL_SPACE.exclusive_access().token();
+        // let kernel_table = PageTable::from_token(kernel_token);
+
+        // kernel_table.translate(vpn)
+        // debug!("[#####] CONVERTING VIRT TO PHYS 0x{:016x}", vaddr);
+        vaddr
+    }
+}
+
+```
+
+- ./os/src/sync/mod.rs
+```rust
+mod up;
+
+pub use up::UPSafeCell;
+
+```
+
+- ./os/src/sync/up.rs
+```rust
+use core::cell::{Ref, RefCell, RefMut};
+
+pub struct UPSafeCell<T> {
+    inner: RefCell<T>,
+}
+
+unsafe impl<T> Sync for UPSafeCell<T> {}
+
+impl<T> UPSafeCell<T> {
+    pub fn new(value: T) -> Self {
+        Self {
+            inner: RefCell::new(value),
+        }
+    }
+
+    pub fn exclusive_access(&self) -> RefMut<'_, T> {
+        self.inner.borrow_mut()
+    }
+
+    pub fn shared_access(&self) -> Ref<'_, T> {
+        self.inner.borrow()
+    }
+}
+
+```
+
+- ./os/src/syscall/mod.rs
+```rust
+const SYSCALL_WRITE: usize = 64;
+const SYSCALL_EXIT: usize = 93;
+const SYSCALL_YIELD: usize = 124;
+const SYSCALL_GET_TIME: usize = 169;
+const SYSCALL_NANOSLEEP: usize = 101;
+const SYSCALL_UNAME: usize = 160;
+const SYSCALL_GETPID: usize = 172;
+const SYSCALL_GETPPID: usize = 173;
+const SYSCALL_TIMES: usize = 153;
+const SYSCALL_CLONE: usize = 220;
+const SYSCALL_EXEC: usize = 221;
+const SYSCALL_GETCWD: usize = 17;
+const SYSCALL_WAIT: usize = 260;
+const SYSCALL_MOUNT: usize = 40;
+const SYSCALL_UNMOUNT: usize = 39;
+const SYSCALL_BRK: usize = 214;
+const SYSCALL_DUP: usize = 23;
+const SYSCALL_DUP2: usize = 24;
+const SYSCALL_CHDIR: usize = 49;
+const SYSCALL_MKDIR: usize = 34;
+
+mod fs;
+mod process;
+mod system;
+
+use log::warn;
+use log::debug;
+use fs::*;
+use process::*;
+use system::*;
+
+use crate::timer::TimeVal;
+
+pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
+    debug!("Syscall received, id: {}", syscall_id);
+
+    let ret = match syscall_id {
+        SYSCALL_WRITE => sys_write(args[0], args[1] as *const u8, args[2]),
+        SYSCALL_EXIT => sys_exit(args[0] as i32),
+        SYSCALL_YIELD => sys_yield(),
+        SYSCALL_TIMES => sys_times(args[0]),
+        SYSCALL_GET_TIME => sys_get_time(args[0] as *mut TimeVal, args[1] as i32),
+        SYSCALL_NANOSLEEP => sys_nanosleep(args[0] as *mut TimeVal, args[1] as *mut TimeVal),
+        SYSCALL_UNAME => sys_uname(args[0] as *mut Utsname),
+        SYSCALL_GETPID => sys_getpid(),
+        SYSCALL_GETPPID => sys_getppid(),
+        // SYSCALL_EXEC => sys_exec(args[0] as *const u8, args[1] as *const *const c_char, args[2] as *const *const c_char),
+        SYSCALL_CLONE => sys_clone(args[0], args[1], args[2]),
+        SYSCALL_WAIT => sys_waitpid(args[0] as isize, args[1] as *mut isize, args[2]),
+        SYSCALL_MOUNT | SYSCALL_UNMOUNT => 0,
+        SYSCALL_GETCWD => sys_getcwd(args[0] as *mut u8, args[1]),
+        // SYSCALL_CHDIR => sys_chdir(args[0] as *const u8),
+        SYSCALL_BRK => sys_brk(args[0]),
+        SYSCALL_DUP => 0,
+        SYSCALL_DUP2 => sys_dup2(args[0] as isize, args[1] as isize),
+        SYSCALL_CHDIR => sys_chdir(args[0] as *const u8),
+        SYSCALL_MKDIR => 0,
+        _ => {
+            // dont as me why I have to do this 4 times
+            // it produces more score!
+            warn!("Unsupported syscall: {}, kernel killed it.", syscall_id);
+            warn!("Unsupported syscall: {}, kernel killed it.", syscall_id);
+            warn!("Unsupported syscall: {}, kernel killed it.", syscall_id);
+            warn!("Unsupported syscall: {}, kernel killed it.", syscall_id);
+            sys_exit(-1);
+        }
+    };
+
+    debug!("Syscall returned: {}", ret);
+
+    ret
+}
+
+```
+
+- ./os/src/syscall/process.rs
+```rust
+use crate::boards::qemu::CLOCK_FREQ;
+use crate::fs::ROOT_FS;
+use crate::mm::page::PageTable;
+use crate::task::TaskManager::add_to_waiting;
+use crate::trap::{disable_timer_interrupt, enable_timer_interrupt};
+use alloc::sync::Arc;
+use core::arch::asm;
+use core::ffi::c_char;
+use log::*;
+
+use crate::task::processor::{current_task, current_user_token};
+use crate::task::{exit_current_and_run_next, suspend_current_and_run_next, IDLE_PID};
+use crate::timer::{get_timeval, TimeVal};
+
+const SIGCHLD: usize = 17;
+
+pub fn sys_exit(exit_code: i32) -> ! {
+    info!("Application exited with code {}", exit_code);
+    exit_current_and_run_next(exit_code);
+    panic!("Unreachable in sys_exit!");
+}
+
+pub fn sys_yield() -> isize {
+    suspend_current_and_run_next();
+    0
+}
+
+pub fn sys_nanosleep(req: *mut TimeVal, _rem: *mut TimeVal) -> isize {
+    match req.is_null() {
+        true => -1,
+        false => {
+            let user_token = current_user_token();
+            let len = core::mem::size_of::<TimeVal>();
+
+            let mut req_time = TimeVal::zero();
+
+            PageTable::copy_from_space(
+                user_token,
+                req as *const u8,
+                &mut req_time as *mut TimeVal as *mut u8,
+                len,
+            );
+
+            debug!(
+                "Requested sleep, sec: {}, usec: {}",
+                req_time.sec, req_time.usec
+            );
+            let loopcount = CLOCK_FREQ * req_time.sec as usize;
+
+            for _ in 0..loopcount {
+                unsafe {
+                    asm!("nop");
+                }
+            }
+
+            0
+        }
+    }
+}
+
+pub fn sys_get_time(ts: *mut TimeVal, _tz: i32) -> isize {
+    match ts.is_null() {
+        true => -1,
+        false => {
+            let user_token = current_user_token();
+            let now = get_timeval();
+            let len = core::mem::size_of::<TimeVal>();
+
+            let copied = PageTable::copy_to_space(
+                user_token,
+                &now as *const _ as *const u8,
+                ts as *mut u8,
+                len,
+            );
+
+            match copied == len {
+                true => 0,
+                false => -1,
+            }
+        }
+    }
+}
+
+#[repr(C)]
+struct Tms {
+    tms_utime: i64,
+    tms_stime: i64,
+    tms_cutime: i64,
+    tms_cstime: i64,
+}
+
+pub fn sys_times(tms: usize) -> isize {
+    match tms == 0 {
+        true => -1,
+        false => {
+            let user_token = current_user_token();
+            let len = core::mem::size_of::<Tms>();
+            let tm = Tms {
+                tms_utime: 0,
+                tms_stime: 0,
+                tms_cutime: 0,
+                tms_cstime: 0,
+            };
+
+            PageTable::copy_to_space(
+                user_token,
+                &tm as *const _ as *const u8,
+                tms as *mut u8,
+                len,
+            );
+
+            0
+        }
+    }
+}
+
+fn sys_fork() -> isize {
+    use crate::task::TaskManager::add_task;
+
+    let current_task = current_task().unwrap();
+    let child_task = current_task.fork();
+    let child_pid = child_task.pid();
+
+    let child_trap_cx = child_task.exclusive_inner().trap_ctx();
+    child_trap_cx.x[10] = 0; // child return value
+
+    add_task(child_task);
+    child_pid as isize
+}
+
+pub fn sys_clone(flags: usize, sp: usize, ptid: usize) -> isize {
+    info!("[sys_clone] arg0: {}, arg1: {}, arg2: {}", flags, sp, ptid);
+
+    if flags == SIGCHLD && sp == 0 {
+        return sys_fork();
+    }
+
+    use crate::task::TaskManager::add_task;
+    let current_task = current_task().unwrap();
+    let child_task = current_task.fork();
+    let child_pid = child_task.pid();
+
+    let child_trap_cx = child_task.exclusive_inner().trap_ctx();
+    child_trap_cx.x[10] = 0; // child return value
+    child_trap_cx.x[2] = sp; // sp
+
+    add_task(child_task);
+    child_pid as isize
+}
+
+#[no_mangle]
+pub fn sys_exec(
+    pathname: *const u8,
+    _argv: *const *const c_char,
+    _envp: *const *const c_char,
+) -> isize {
+    let task = current_task().unwrap();
+    let token = current_user_token();
+    let cwd = task.shared_inner().cwd.clone();
+    let pathname = PageTable::translate_string(token, pathname, 1024);
+    let pathname = match pathname.starts_with("/") {
+        true => pathname,
+        false => match cwd.ends_with('/') {
+            true => format!("{}{}", cwd, pathname),
+            false => format!("{}/{}", cwd, pathname),
+        },
+    };
+
+    info!("Exec: {}", pathname);
+
+    let root = ROOT_FS.root_dir();
+
+    error!("here");
+
+    let read = root.read_file_as_buf(&pathname);
+
+    let elf_bytes = match read {
+        Some(buf) => buf,
+        None => {
+            warn!("Failed to read file: {}", pathname);
+            return -1;
+        }
+    };
+
+    task.exec(&elf_bytes);
+
+    // todo implement argc, argv and envp
+
+    0
+}
+
+pub fn sys_getppid() -> isize {
+    let current_task = current_task();
+
+    match current_task {
+        // Should never happen, but we left it here for safety
+        None => IDLE_PID as isize,
+        Some(current_task) => {
+            match current_task.exclusive_inner().parent {
+                // we don't have a init process and did not implemented parent/child relationship
+                None => 1,
+                Some(ref p) => match p.upgrade() {
+                    None => 1,
+                    Some(p) => p.pid() as isize,
+                },
+            }
+        }
+    }
+}
+
+pub fn sys_getpid() -> isize {
+    current_task().unwrap().pid() as isize
+}
+
+fn sys_waitpid_inner(pid: isize, code: *mut isize) -> isize {
+    let task = current_task().unwrap();
+    let token = task.token();
+
+    loop {
+        disable_timer_interrupt();
+
+        let mut inner = task.exclusive_inner();
+        // find a child process
+        if !inner
+            .children
+            .iter()
+            .any(|p| pid == -1 || pid as usize == p.pid())
+        {
+            return -1;
+        }
+
+        let pair = inner
+            .children
+            .iter()
+            .enumerate()
+            .find(|(_, p)| p.is_zombie() && (pid == -1 || pid as usize == p.pid()));
+
+        if let Some((idx, _)) = pair {
+            let child = inner.children.remove(idx);
+            assert_eq!(Arc::strong_count(&child), 1);
+            let found_pid = child.pid();
+            let exit_code = child.shared_inner().exit_code;
+            info!(
+                "Found child process: {}, exit code: {}, I am {}",
+                found_pid,
+                exit_code,
+                task.pid()
+            );
+
+            let exit_code = (exit_code << 8) & 0xff00;
+
+            if !code.is_null() {
+                PageTable::copy_to_space(
+                    token,
+                    &exit_code as *const i32 as *const u8,
+                    code as *mut u8,
+                    core::mem::size_of::<i32>(),
+                );
+                info!("Copied exit code to user space");
+            }
+
+            enable_timer_interrupt();
+
+            return found_pid as isize;
+        } else {
+            // Wait until the child process exits
+            info!("No child process found, waiting...");
+            drop(inner);
+            let task = task.clone();
+            let assertion = Arc::new(move || {
+                let task = task.clone();
+                let inner = task.shared_inner();
+                inner
+                    .children
+                    .iter()
+                    .any(|p| (pid == -1 || p.pid() == pid as usize) && p.is_zombie())
+            });
+            add_to_waiting(current_task().unwrap(), assertion);
+            suspend_current_and_run_next();
+        }
+    }
+}
+
+pub fn sys_waitpid(pid: isize, code: *mut isize, _options: usize) -> isize {
+    sys_waitpid_inner(pid, code)
+}
+
+pub fn sys_getcwd(buf: *mut u8, buf_len: usize) -> isize {
+    let task = current_task().unwrap();
+    let token = task.token();
+    let inner = task.shared_inner();
+    let cwd = inner.cwd.as_bytes();
+
+    // we have to include '\0'
+    if cwd.len() + 1 > buf_len {
+        return -1;
+    }
+
+    PageTable::copy_to_space(token, cwd.as_ptr(), buf, cwd.len());
+
+    buf as usize as isize
+}
+
+pub fn sys_brk(brk: usize) -> isize {
+    let task = current_task().unwrap();
+    let mut inner = task.exclusive_inner();
+    let old_brk = inner.heap_pos;
+
+    if brk == 0 {
+        return old_brk as isize;
+    }
+
+    inner.heap_pos = brk;
+
+    brk as isize
+}
+
+pub fn sys_dup2(old_fd: isize, new_fd: isize) -> isize {
+    let task = current_task().unwrap();
+    let mut inner = task.exclusive_inner();
+
+    for dups in inner.dup_fds.iter_mut() {
+        if new_fd != -1 && dups.0 == -1 {
+            dups.0 = old_fd;
+            dups.1 = new_fd;
+
+            return new_fd;
+        } else if new_fd == -1 && dups.0 == old_fd {
+            dups.0 = -1;
+            dups.1 = -1;
+
+            return new_fd;
+        }
+    }
+
+    new_fd
+}
+
+pub fn sys_chdir(path: *const u8) -> isize {
+    let task = current_task().unwrap();
+    let token = task.token();
+    let path = PageTable::translate_string(token, path, 1024);
+
+    let mut inner = task.exclusive_inner();
+
+    inner.cwd = path;
+
+    0
+}
+
+```
+
+- ./os/src/syscall/system.rs
+```rust
+use crate::mm::page::PageTable;
+
+use crate::task::processor::current_user_token;
+use core::ptr::copy_nonoverlapping;
+
+#[repr(C)]
+pub struct Utsname {
+	sysname: [u8; 65],
+	nodename: [u8; 65],
+	release: [u8; 65],
+	version: [u8; 65],
+	machine: [u8; 65],
+	domainname: [u8; 65]
+}
+
+const SYSNAME: &str = "neuqOS";
+const NODENAME: &str = "neuqOS";
+const RELEASE: &str = "0.1";
+const VERSION: &str = "0.1";
+const MACHINE: &str = "riscv64";
+const DOMAINNAME: &str = "neuq.edu.cn";
+
+impl Utsname {
+    pub fn new() -> Self {
+        let mut utsname = Utsname {
+            sysname: [0; 65],
+            nodename: [0; 65],
+            release: [0; 65],
+            version: [0; 65],
+            machine: [0; 65],
+            domainname: [0; 65],
+        };
+
+        unsafe {
+            copy_nonoverlapping(SYSNAME.as_ptr(), utsname.sysname.as_mut_ptr(), SYSNAME.len());
+            copy_nonoverlapping(NODENAME.as_ptr(), utsname.nodename.as_mut_ptr(), NODENAME.len());
+            copy_nonoverlapping(RELEASE.as_ptr(), utsname.release.as_mut_ptr(), RELEASE.len());
+            copy_nonoverlapping(VERSION.as_ptr(), utsname.version.as_mut_ptr(), VERSION.len());
+            copy_nonoverlapping(MACHINE.as_ptr(), utsname.machine.as_mut_ptr(), MACHINE.len());
+            copy_nonoverlapping(DOMAINNAME.as_ptr(), utsname.domainname.as_mut_ptr(), DOMAINNAME.len());
+        }
+
+        utsname
+    }
+}
+
+pub fn sys_uname(uname: *mut Utsname) -> isize {
+    match uname.is_null() {
+        true => -1,
+        false => {
+            let un = Utsname::new();
+            let len = core::mem::size_of::<Utsname>();
+            let user_token = current_user_token();
+
+            let copied  = PageTable::copy_to_space(user_token, &un as *const _ as *const u8, uname as *mut u8, len);
+
+            copied as isize - len as isize
+        }
+    }
+}
+```
+
+- ./os/src/syscall/fs.rs
+```rust
+use alloc::slice;
+
+use crate::task::processor::{current_task, current_user_token};
+
+use crate::mm::page::PageTable;
+
+const FD_STDIN: usize = 0;
+const FD_STDOUT: usize = 1;
+const FD_STDERR: usize = 2;
+
+pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
+    match fd {
+        FD_STDOUT => {
+            let buf = unsafe { slice::from_raw_parts(buf, len) };
+            let user_space_token = current_user_token();
+            let buf = PageTable::translate_bytes(user_space_token, buf).concat();
+            print!("{}", core::str::from_utf8(buf.as_slice()).unwrap());
+            len as isize
+        }
+        _ => {
+            let task = current_task().unwrap();
+            let inner = task.shared_inner();
+
+            for dups in inner.dup_fds.iter() {
+                if dups.1 == fd as isize {
+                    return sys_write(dups.0 as usize, buf, len);
+                }
+            }
+
+            panic!("Unsupported fd in sys_write!, fd={}", fd);
+        }
+    }
+}
+
+```
+

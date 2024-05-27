@@ -9,13 +9,21 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
+bin = []
+bench = []
+
 [package]
 edition = "2021"
 rust-version = "1.65"
 name = "fatfs"
 version = "0.4.0"
 authors = ["Rafał Harabień <rafalh92@outlook.com>"]
+build = false
 exclude = ["resources/*"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = """
 FAT filesystem library.
 """
@@ -28,6 +36,42 @@ keywords = [
 categories = ["filesystem"]
 license = "MIT"
 repository = "https://github.com/rafalh/rust-fatfs"
+
+[lib]
+name = "fatfs"
+path = "src/lib.rs"
+
+[[example]]
+name = "cat"
+path = "examples/cat.rs"
+
+[[example]]
+name = "ls"
+path = "examples/ls.rs"
+
+[[example]]
+name = "mkfatfs"
+path = "examples/mkfatfs.rs"
+
+[[example]]
+name = "partition"
+path = "examples/partition.rs"
+
+[[example]]
+name = "write"
+path = "examples/write.rs"
+
+[[test]]
+name = "format"
+path = "tests/format.rs"
+
+[[test]]
+name = "read"
+path = "tests/read.rs"
+
+[[test]]
+name = "write"
+path = "tests/write.rs"
 
 [dependencies.bitflags]
 version = "2"
