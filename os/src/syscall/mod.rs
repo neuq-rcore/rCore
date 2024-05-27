@@ -51,7 +51,7 @@ pub fn syscall(syscall_id: usize, args: [usize; 3]) -> isize {
         SYSCALL_WAIT => sys_waitpid(args[0] as isize, args[1] as *mut isize, args[2]),
         SYSCALL_MOUNT | SYSCALL_UNMOUNT => 0,
         SYSCALL_GETCWD => sys_getcwd(args[0] as *mut u8, args[1]),
-        // SYSCALL_CHDIR => sys_chdir(args[0] as *const u8),
+        SYSCALL_CHDIR => sys_chdir(args[0] as *const u8),
         SYSCALL_BRK => sys_brk(args[0]),
         SYSCALL_DUP => 0,
         SYSCALL_DUP2 => sys_dup2(args[0] as isize, args[1] as isize),
