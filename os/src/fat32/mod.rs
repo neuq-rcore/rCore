@@ -11,9 +11,7 @@ use fatfs::{
     FileSystem, FsOptions, IoBase, LossyOemCpConverter, NullTimeProvider, Read, Seek, SeekFrom,
     Write,
 };
-use log::debug;
 use virtio_drivers::device::blk::VirtIOBlk;
-use virtio_drivers::transport;
 use virtio_drivers::transport::mmio::{MmioTransport, VirtIOHeader};
 
 pub struct Fat32FileSystem;

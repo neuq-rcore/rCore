@@ -6,7 +6,7 @@ use crate::sync::UPSafeCell;
 
 use super::address::{PhysAddr, PhysPageNum};
 
-trait FrameAllocator {
+trait IFrameAllocator {
     fn alloc(&mut self) -> Option<PhysPageNum>;
     fn dealloc(&mut self, ppn: PhysPageNum);
     fn alloc_contiguous(&mut self, count: usize) -> Option<Vec<PhysPageNum>>;
@@ -80,7 +80,7 @@ pub struct StackedFrameAllocator {
     recycled: VecDeque<usize>, // 回收的物理页号
 }
 
-impl FrameAllocator for StackedFrameAllocator {
+impl IFrameAllocator for StackedFrameAllocator {
     fn alloc(&mut self) -> Option<PhysPageNum> {
         if let Some(ppn) = self.recycled.pop_front() {
             return Some(PhysPageNum(ppn));

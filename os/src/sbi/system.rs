@@ -5,7 +5,7 @@ pub fn set_timer(timer: usize) {
 }
 
 pub fn shutdown(failure: bool) -> ! {
-    use super::qemu::{QEMUExit, QEMU_EXIT_HANDLE};
+    use super::qemu::{IQEMUExit, QEMU_EXIT_HANDLE};
 
     match option_env!("IS_CI_ENVIRONMENT") {
         Some(_) => {
