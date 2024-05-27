@@ -9,6 +9,10 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
+bin = []
+example = []
+test = []
+
 [package]
 edition = "2021"
 name = "buddy_system_allocator"
@@ -18,6 +22,11 @@ authors = [
     "Vinay Chandra Dommeti <github@vinay.vc>",
     "Andrew Walbran <qwandor@google.com>",
 ]
+build = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "A bare metal allocator that uses buddy system."
 homepage = "https://github.com/rcore-os/buddy_system_allocator"
 documentation = "https://docs.rs/buddy_system_allocator"
@@ -30,8 +39,13 @@ keywords = [
 license = "MIT"
 repository = "https://github.com/rcore-os/buddy_system_allocator"
 
+[lib]
+name = "buddy_system_allocator"
+path = "src/lib.rs"
+
 [[bench]]
 name = "memory_allocator_benchmark"
+path = "benches/memory_allocator_benchmark.rs"
 harness = false
 
 [dependencies.spin]

@@ -1,4 +1,4 @@
-use crate::trap::{__restore_snap, trap_return};
+use crate::trap::trap_return;
 
 #[derive(Copy, Clone)]
 #[repr(C)]
@@ -15,14 +15,6 @@ impl TaskContext {
             ra: 0,
             sp: 0,
             s: [0; 12]
-        }
-    }
-
-    pub fn goto_restore(kstack_ptr: usize) -> Self {
-        Self {
-            ra: __restore_snap as usize,
-            sp: kstack_ptr,
-            s: [0; 12],
         }
     }
 

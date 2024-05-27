@@ -1,15 +1,18 @@
 mod virt;
 
+use core::ptr::NonNull;
+
 use alloc::boxed::Box;
 
 use virt::VirtioDisk;
 
-use log::debug;
-use crate::driver::virt::VIRTIO0;
+use crate::driver::virt::{VirtioHal, VIRTIO0};
 use fatfs::{
-    FileSystem, FsOptions, IoBase, LossyOemCpConverter, NullTimeProvider, Read, Seek, SeekFrom, Write
+    FileSystem, FsOptions, IoBase, LossyOemCpConverter, NullTimeProvider, Read, Seek, SeekFrom,
+    Write,
 };
-use virtio_drivers::{VirtIOBlk, VirtIOHeader};
+use virtio_drivers::device::blk::VirtIOBlk;
+use virtio_drivers::transport::mmio::{MmioTransport, VirtIOHeader};
 
 pub struct Fat32FileSystem;
 
@@ -20,12 +23,13 @@ impl Fat32FileSystem {
         // Kernel space is identity mapped
         let va = pa;
 
-        let header = unsafe { &mut *(va as *mut VirtIOHeader) };
+        let header = NonNull::new(va as *mut VirtIOHeader).unwrap();
 
-        debug!("[Disk] Valid: {:}", header.verify());
-        assert!(header.verify(), "Header is not valid");
+        let transport =
+            unsafe { MmioTransport::new(header).expect("Failed to create mmio transport") };
 
-        let blk = VirtIOBlk::new(header).expect("Failed to create VirtIOBlk");
+        let blk = VirtIOBlk::<VirtioHal, MmioTransport>::new(transport)
+            .expect("Failed to create VirtIOBlk");
 
         let device = Box::new(VirtioDisk::new(blk));
 
@@ -38,6 +42,9 @@ impl Fat32FileSystem {
 pub struct Fat32IO {
     device: Box<dyn IDiskDevice>,
 }
+
+unsafe impl Send for Fat32IO {}
+unsafe impl Sync for Fat32IO {}
 
 impl Fat32IO {
     pub fn new(device: Box<dyn IDiskDevice>) -> Self {

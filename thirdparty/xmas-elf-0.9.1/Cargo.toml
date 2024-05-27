@@ -9,11 +9,20 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
+example = []
+test = []
+bench = []
+
 [package]
 name = "xmas-elf"
 version = "0.9.1"
 authors = ["Nick Cameron <nrc@ncameron.org>"]
+build = false
 exclude = ["test-data/*"]
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "Library for parsing and navigating ELF data; zero-allocation, type-safe."
 readme = "README.md"
 keywords = [
@@ -30,6 +39,7 @@ repository = "https://github.com/nrc/xmas-elf"
 
 [lib]
 name = "xmas_elf"
+path = "src/lib.rs"
 
 [[bin]]
 name = "xmas_elf"

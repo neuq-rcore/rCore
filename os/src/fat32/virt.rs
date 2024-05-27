@@ -1,4 +1,4 @@
-use virtio_drivers::VirtIOBlk;
+use virtio_drivers::{device::blk::VirtIOBlk, transport::mmio::MmioTransport};
 
 use crate::driver::virt::VirtioHal;
 
@@ -9,11 +9,11 @@ pub const SECTOR_SIZE: usize = 512;
 pub struct VirtioDisk {
     sector: usize,
     offset: usize,
-    virtio_blk: VirtIOBlk<'static, VirtioHal>,
+    virtio_blk: VirtIOBlk<VirtioHal, MmioTransport>,
 }
 
 impl VirtioDisk {
-    pub fn new(virtio_blk: VirtIOBlk<'static, VirtioHal>) -> Self {
+    pub fn new(virtio_blk: VirtIOBlk<VirtioHal, MmioTransport>) -> Self {
         VirtioDisk {
             sector: 0,
             offset: 0,
@@ -25,13 +25,13 @@ impl VirtioDisk {
 impl IDiskDevice for VirtioDisk {
     fn read_blocks(&mut self, buf: &mut [u8]) {
         self.virtio_blk
-            .read_block(self.sector, buf)
+            .read_blocks(self.sector, buf)
             .expect("Error occurred when reading VirtIOBlk");
     }
 
     fn write_blocks(&mut self, buf: &[u8]) {
         self.virtio_blk
-            .write_block(self.sector, buf)
+            .write_blocks(self.sector, buf)
             .expect("Error occurred when writing VirtIOBlk");
     }
 

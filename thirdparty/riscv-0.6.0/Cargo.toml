@@ -9,10 +9,20 @@
 # will likely look very different (and much more reasonable).
 # See Cargo.toml.orig for the original contents.
 
+bin = []
+example = []
+test = []
+bench = []
+
 [package]
 name = "riscv"
 version = "0.6.0"
 authors = ["The RISC-V Team <risc-v@teams.rust-embedded.org>"]
+build = "build.rs"
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
 description = "Low level access to RISC-V processors"
 readme = "README.md"
 keywords = [
@@ -27,6 +37,10 @@ categories = [
 ]
 license = "ISC"
 repository = "https://github.com/rust-embedded/riscv"
+
+[lib]
+name = "riscv"
+path = "src/lib.rs"
 
 [dependencies]
 bare-metal = "0.2.5"

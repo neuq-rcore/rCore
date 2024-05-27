@@ -2,51 +2,80 @@ use core::mem::forget;
 
 use virtio_drivers::Hal;
 
-use log::debug;
-
-// use crate::mm::page_table::PageTable;
-// use crate::mm::memory_set::KERNEL_SPACE;
-
-use crate::mm::{
+use crate::{config::MEMORY_END, mm::{
     frame::{frame_alloc_contiguous, frame_dealloc_contiguous},
-    PhysAddr, VirtAddr,
-};
+    PhysAddr, KERNEL_SPACE,
+}};
+
+use core::ptr::NonNull;
 pub const VIRTIO0: usize = 0x1000_1000;
 
 pub struct VirtioHal;
 
-impl Hal for VirtioHal {
-    fn dma_alloc(count: usize) -> virtio_drivers::PhysAddr {
-        let pages = frame_alloc_contiguous(count).unwrap();
+unsafe impl Hal for VirtioHal {
+    fn dma_alloc(
+        pages: usize,
+        _direction: virtio_drivers::BufferDirection,
+    ) -> (virtio_drivers::PhysAddr, NonNull<u8>) {
+        let pages = frame_alloc_contiguous(pages).unwrap();
 
         let ppn_base = pages.last().unwrap().ppn;
         let begin_addr: PhysAddr = ppn_base.into();
 
         forget(pages);
 
-        // debug!("[#####] dma_alloc: {:#x?}, count: {}", begin_addr, count);
+        let pa = begin_addr.into();
+        let va = NonNull::new((pa) as *mut u8).unwrap();
 
-        begin_addr.into()
+        (pa, va)
     }
 
-    fn dma_dealloc(paddr: virtio_drivers::PhysAddr, pages: usize) -> i32 {
+    unsafe fn dma_dealloc(
+        paddr: virtio_drivers::PhysAddr,
+        _vaddr: core::ptr::NonNull<u8>,
+        pages: usize,
+    ) -> i32 {
         let ppn: PhysAddr = paddr.into();
 
-        // debug!("[#####] dma_dealloc: {:#x?}, count: {}", paddr, pages);
         frame_dealloc_contiguous(ppn.into(), pages);
         0
     }
-    fn phys_to_virt(paddr: virtio_drivers::PhysAddr) -> virtio_drivers::VirtAddr {
-        // debug!("[#####] CONVERTING PHYS TO VIRT 0x{:016x}", paddr);
-        paddr
+
+    unsafe fn mmio_phys_to_virt(
+        paddr: virtio_drivers::PhysAddr,
+        _size: usize,
+    ) -> core::ptr::NonNull<u8> {
+        // we use identity mapping
+        // Don't map to framed memory, use identity mapping
+        // as the kernel is able to access all memory
+        NonNull::new((usize::from(paddr)) as *mut u8).unwrap()
     }
 
-    fn virt_to_phys(vaddr: virtio_drivers::VirtAddr) -> virtio_drivers::PhysAddr {
-        // let kernel_token = KERNEL_SPACE.exclusive_access().token();
-        // let kernel_table = PageTable::from_token(kernel_token);
+    unsafe fn share(
+        buffer: core::ptr::NonNull<[u8]>,
+        _direction: virtio_drivers::BufferDirection,
+    ) -> virtio_drivers::PhysAddr {
+        let va = buffer.as_ptr() as *mut u8 as usize;
 
-        // kernel_table.translate(vpn)
-        // debug!("[#####] CONVERTING VIRT TO PHYS 0x{:016x}", vaddr);
-        vaddr
+        match va {
+            0..=MEMORY_END => va, // fast path for identity mapping
+            _ => {
+                let pa = KERNEL_SPACE.shared_access().table().translate_va(va.into());
+                match pa {
+                    Some(pa) => pa.into(),
+                    None => {
+                        panic!("share: invalid address");
+                    }
+                }
+            }
+        }
+    }
+
+    unsafe fn unshare(
+        _paddr: virtio_drivers::PhysAddr,
+        _buffer: core::ptr::NonNull<[u8]>,
+        _direction: virtio_drivers::BufferDirection,
+    ) {
+        // Do nothing
     }
 }
