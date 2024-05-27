@@ -45,9 +45,10 @@ make test
 
 这将模拟比赛的评测环境，首先执行 `make all` ，然后使用要求的 Qemu 启动参数挂载测试样例并运行内核进行测试。运行结束后，测试脚本 `test/visualize_result.py` 将会生成测试结果的可视化报告。
 
-下面是生成的可视化报告的一个例子：
+左图为生成的可视化报告的一个例子，右图为本项目的最终报告：
 
-![visual_report.png](docs/assets/visual_report.png)
+| ![visual_report](docs/assets/visual_report.png) | ![final_score](docs/assets/final_score_report.jpg) |
+|-------------------------------------------------|----------------------------------------------------|
 
 对于每个测试，
 
@@ -110,16 +111,16 @@ make connect
 
 - [Introduction · GitBook](https://nju-projectn.github.io/ics-pa-gitbook/ics2024/)
 
+## 知识产权与学术诚信
+
+- 本团队仓库在初赛期间全过程保持开源状态
+
+- 本团队全程严守诚信，不存在抄袭谎报现象
+
 ## 许可
 
 MIT
 
 ## 联系我们
 
-如若有问题欢迎与本团队联系，我们会在第一时间给您回复，邮箱cai1hsu@outlook.com，欢迎您踊跃参与
-
-## 知识产权与学术诚信
-
-- 本团队仓库在初赛期间全过程保持开源状态
-
-- 本团队全程严守诚信，不存在抄袭谎报现象
+如若有问题欢迎与本团队联系，我们会在第一时间给您回复，邮箱 [cai1hsu@outlook.com](mailto:cai1hsu@outlook.com) ，欢迎您踊跃参与。

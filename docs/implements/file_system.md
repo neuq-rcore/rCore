@@ -4,6 +4,8 @@
 
 ## 相关依赖
 
+- `fatfs`
+
 - `virtio-drivers`
 
 ## 相关模块
