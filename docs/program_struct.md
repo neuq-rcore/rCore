@@ -8,7 +8,7 @@ neuqOS
 │  ├── opensbi-qemu.bin
 │  ├── rustsbi-k210.bin
 │  └── rustsbi-qemu.bin
-├── docs
+├── docs                  # 文档
 │  ├── assets
 │  │  ├── final_score_report.jpg
 │  │  ├── neuq.jpg
@@ -33,57 +33,57 @@ neuqOS
 │  └── src
 │     ├── allocation
 │     │  └── mod.rs
-│     ├── boards
+│     ├── boards          # 板卡信息
 │     │  ├── mod.rs
 │     │  └── qemu.rs
-│     ├── config.rs
-│     ├── driver
+│     ├── config.rs       # qmeu平台配置
+│     ├── driver          # 外设配置参数
 │     │  ├── mod.rs
 │     │  └── virt
 │     │     └── mod.rs
-│     ├── fat32
+│     ├── fat32           # FAT32文件系统
 │     │  ├── mod.rs
 │     │  └── virt.rs
-│     ├── fs
+│     ├── fs              #文件系统
 │     │  ├── inode.rs
 │     │  └── mod.rs
 │     ├── lang_items.rs
 │     ├── linker-qemu.ld
 │     ├── logging.rs
 │     ├── main.rs
-│     ├── mm
-│     │  ├── address.rs
-│     │  ├── frame.rs
-│     │  ├── heap.rs
-│     │  ├── mod.rs
-│     │  └── page.rs
-│     ├── sbi
+│     ├── mm               #内存管理
+│     │  ├── address.rs    # 虚拟/物理地址相关
+│     │  ├── frame.rs  	   # 物理页帧分配
+│     │  ├── heap.rs       # 堆分配
+│     │  ├── mod.rs 
+│     │  └── page.rs 	   # 页分配
+│     ├── sbi              # SBI相关调用
 │     │  ├── console.rs
 │     │  ├── mod.rs
 │     │  ├── qemu.rs
 │     │  └── system.rs
 │     ├── stack_trace.rs
 │     ├── stdio.rs
-│     ├── sync
+│     ├── sync             # 同步模块
 │     │  ├── mod.rs
 │     │  └── up.rs
-│     ├── syscall
+│     ├── syscall          # 系统调用
 │     │  ├── fs.rs
 │     │  ├── mod.rs
 │     │  ├── process.rs
 │     │  └── system.rs
-│     ├── task
-│     │  ├── context.rs
+│     ├── task             # 进程
+│     │  ├── context.rs    # 进程上下文
 │     │  ├── mod.rs
-│     │  ├── pid.rs
+│     │  ├── pid.rs        # 进程pid
 │     │  ├── processor.rs
 │     │  ├── switch.rs
 │     │  ├── switch.S
 │     │  ├── task.rs
 │     │  └── TaskManager.rs
 │     ├── timer.rs
-│     └── trap
-│        ├── context.rs
+│     └── trap            # 异常处理
+│        ├── context.rs   # 异常上下文处理
 │        ├── mod.rs
 │        └── trap.S
 ├── prompt-generator.py
@@ -96,7 +96,7 @@ neuqOS
    ├── Cargo.lock
    ├── Cargo.toml
    ├── Makefile
-   └── src
+   └── src                # 测试脚本
       ├── bin
       │  ├── 00power_3.rs
       │  ├── 01power_5.rs
