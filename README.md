@@ -86,6 +86,12 @@ make debug
 make connect
 ```
 
+### 日志调试
+
+``` shell
+make run LOG=<level>
+```
+
 ### VSCode
 
 在 VSCode 中打开项目，按下 <kbd>F5</kbd> 进行调试。
