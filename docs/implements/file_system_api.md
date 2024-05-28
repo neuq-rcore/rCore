@@ -85,7 +85,7 @@ enum Fat32DirInner<'a> {
 
   - **read_file_as_buf(&self, path: &str)**: 根据路径查找文件，读取至内存并返回，后续可以被 `task` 模块处理。
 
-## 模块 `inode`
+## 子模块 `inode`
 
 位标志结构体 `OpenFlags` 用于管理打开文件时可用的标志：
 
