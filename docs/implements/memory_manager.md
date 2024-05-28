@@ -4,12 +4,16 @@
 
 ## 相关依赖
 
-
+- `buddy_system_allocator`
 
 ## 相关模块
 
 - `mm`:
+
 - `address`:
+
 - `frame`:
+
 - `page`:
+
 - `heap`:
