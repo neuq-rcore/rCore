@@ -86,7 +86,7 @@ make debug
 make connect
 ```
 
-### 日志调试
+#### 生成运行日志
 
 ``` shell
 make run LOG=<level>
