@@ -16,7 +16,7 @@
 
 - `address`: 物理内存、虚拟内存、物理内存页号、虚拟内存页号的抽象。
 
-- `frame`: 物理页贞管理。
+- `frame`: 栈式物理页帧管理。
 
 - `page`: 页表和页表项。
 
@@ -59,6 +59,45 @@
 - **into_indices(&self)**: 取出虚拟页号的三级页索引。
 
 ## 模块 `frame`
+
+`StackedFrameAllocator` 结构体实现了 trait `IFrameAllocator` ：
+
+```rust
+pub struct StackedFrameAllocator {
+    curr_page_num: usize,      // 空闲内存的起始物理页号
+    end_page_num: usize,       // 空闲内存的结束物理页号
+    recycled: VecDeque<usize>, // 回收的物理页号
+}
+```
+
+```rust
+trait IFrameAllocator {
+    fn alloc(&mut self) -> Option<PhysPageNum>;
+    fn dealloc(&mut self, ppn: PhysPageNum);
+    fn alloc_contiguous(&mut self, count: usize) -> Option<Vec<PhysPageNum>>;
+}
+```
+
+模块中三个顶层函数对 `StackedFrameAllocator` 的函数进行了封装，并对外公开：
+
+- **frame_alloc()**: 分配一块内存空间创建新的物理页码并返回，如果有空闲页号则马上分配，否则以 `curr_page_num` 为起点开辟一块新的区域，如果页号耗尽则返回空值，表示失败。
+
+- **frame_dealloc(ppn: PhysPageNum)**: 根据指定的物理页码释放对应的内存空间，底层原理是将给定的物理页码回收。
+
+- **frame_alloc_contiguous(count: usize)**: 分配一块连续的内存空间创建 `count` 数量的物理页码并返回 Vec 对象，如果未分配的页号不足以创建则返回空值。
+
+- **frame_dealloc_contiguous(start_ppn: PhysPageNum, count: usize)**: 根据起始页码和长度释放对应的内存空间。
+
+其原生函数 **init(&mut self, lhs: PhysPageNum, rhs: PhysPageNum)** 和 **new()** 用于初始化自身。
+
+```rust
+lazy_static! {
+    pub static ref FRAME_ALLOCATOR: UPSafeCell<StackedFrameAllocator> =
+        unsafe { UPSafeCell::new(StackedFrameAllocator::new()) };
+}
+```
+
+模块中顶层函数 **init()** 就是对 `FRAME_ALLOCATOR::init()` 的包装， FRAME_ALLOCATOR 维护的物理地址从 `ekernel` 标记开始直到 `MEMORY_END` 。
 
 ## 模块 `page`
 
