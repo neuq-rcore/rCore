@@ -60,6 +60,8 @@
 
 ## 模块 `frame`
 
+`TrackedFrame` 是对 `PhysPageNum` 的封装，实现了创建和回收 `PhysPageNum` 的自动化。
+
 `StackedFrameAllocator` 结构体实现了 trait `IFrameAllocator` ：
 
 ```rust
