@@ -103,4 +103,104 @@ lazy_static! {
 
 ## 模块 `page`
 
+`PageTableEntry` 结构体是页表项的抽象，维护了一段 64 位地址表示实际的页表项。
+
+更加详细的数据结构抽象与类型定义如下：
+
+| 位坐标 | 63 ～ 54 | 53 ～ 28 | 27 ~ 19 | 18~ 10 | 9 ~ 8 | 7 | 6 | 5 | 4 | 3 | 2 | 1 | 0 |
+|--------|----------|----------|---------|--------|-------|---|---|---|---|---|---|---|---|
+| 定义   | 保留段   | PPN[2]   | PPN[1]  | PPN[0] | RSW   | D | A | G | U | X | W | R | V |
+| 位数   | 10       | 26       | 9       | 9      | 2     | 1 | 1 | 1 | 1 | 1 | 1 | 1 | 1 |
+
+PPN 表示物理页码的三级页表， `DAGUXWRV` 是标志位，由 `PageTableEntryFlags` 位标志集合维护：
+
+```rust
+bitflags! {
+    pub struct PageTableEntryFlags: u8 {
+        /// V(Valid)：仅当位 V 为 1 时，页表项合法
+        const V = 1 << 0;
+        /// R(Read)/W(Write)/X(eXecute)：表示页表项对应的虚拟页面是否允许读/写/执行
+        const R = 1 << 1;
+        const W = 1 << 2;
+        const X = 1 << 3;
+        /// U(User)：表示页表项对应的虚拟页面在 CPU 处于 U 特权级时是否允许被访问
+        const U = 1 << 4;
+        const G = 1 << 5;
+        /// A(Accessed)：处理器记录自从页表项上的这一位被清零之后，页表项的对应虚拟页面是否被访问过
+        const A = 1 << 6;
+        /// D(Dirty)：处理器记录自从页表项上的这一位被清零之后，页表项的对应虚拟页面是否被修改过
+        const D = 1 << 7;
+    }
+}
+```
+
+以上对标记为的解释摘自 **rCore-Tuturial** 。
+
+`PageTableEntry` 的原生函数如下：
+
+- **new(ppn: PhysPageNum, flags: PageTableEntryFlags)**: 返回根据指定的物理页码和位标志集合构造的页表项。
+
+- **empty()**: 返回空的页表项。
+
+- **ppn(&self)**: 获取物理页码并返回。
+
+- **flags(&self)**: 获取位标志并返回。
+
+- **is_valid(&self)**: 判断页表项对应的虚拟页面是否合法。
+
+- **readable(&self)**: 判断页表项对应的虚拟页面是否可读。
+
+- **writable(&self)**: 判断页表项对应的虚拟页面是否可写。
+
+- **executable(&self)**: 判断页表项对应的虚拟页面是否可执行。
+
+`PageTable` 是一个庞大的结构体，用于管理多级页表，其定义如下：
+
+```rust
+pub struct PageTable {
+    root_ppn: PhysPageNum,
+    frames: Vec<TrackedFrame>,
+}
+```
+
+`PageTable` 的函数有很多，与结构体属性相关的函数如下：
+
+- **new()**: 构造函数，使用页帧分配器初始化根级物理页表。
+
+- **root_ppn(&self)**: 返回根级物理页表。
+
+获取页表项的函数如下：
+
+- **get_entry(&self, vpn: VirtPageNum)**: 根据指定的虚拟页码从 `root_ppn` 开始查找对应的页表项，如果找不到则返回空值。
+
+- **get_create_entry(&mut self, vpn: VirtPageNum)**: 根据指定的虚拟页码从 `root_ppn` 开始查找对应的页表项，如果找不到则创建位标志为 V 的页表项。
+
+管理物理页码与虚拟页码的函数如下，它们保证了物理页和虚拟页的一一对应关系：
+
+- **map(&mut self, vpn: VirtPageNum, ppn: PhysPageNum, flags: PageTableEntryFlags)**: 将 `get_entry` 返回的 `PageTableEntry` 指向 ppn ，并且加以 flag 位标志，构建物理页和虚拟也的映射关系。
+
+- **unmap(&mut self, vpn: VirtPageNum)**: 解除指定虚拟页码和它对应的物理页码的映射关系，如果尝试解除一个没有映射关系的虚拟页码则会 panic 。
+
+提供了一种类似 MMU 的手动查页表的方法：
+
+- **from_token(satp: usize)**: 临时创建一个用于查询的 `PageTable` ，根据参数 `satp` 得到根节点的物理页号，`frame` 字段为空，实际不控制资源。
+
+- **token(&self)**: 将 `root_ppn` 转化为 `satp` 格式返回。
+
+以下是对外提供的接口：
+
+- **translate(&self, vpn: VirtPageNum)**: 根据指定的虚拟页码返回其对应的页表项。
+
+- **translate_va(&self, va: VirtAddr)**: 根据指定的虚拟地址返回其对应的物理地址。
+
+- **translate_bytes(token: usize, buf: &[u8])**: 根据 token 按照给定虚拟缓冲区获取物理页面对应的内容并返回 Vec 。
+
+- **translate_string(token: usize, ptr: *const u8, limit: usize)**: 根据 token 按照给定的指针和长度返回物理地址对应的字符串。
+
+- **copy_to_space(token: usize, src: *const u8, dst: *mut u8, len: usize)**: 根据 token 将 `src` 所在的虚拟原缓冲区写入 `dst` 对应的物理缓冲区。
+
+- **copy_from_space(token: usize, src: *const u8, dst: *mut u8, len: usize)**: 根据 token 将 `src` 所在的物理原缓冲区写入 `dst` 对应的虚拟缓冲区。
+
 ## 模块 `mm`
+
+
