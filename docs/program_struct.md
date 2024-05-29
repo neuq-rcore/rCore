@@ -48,7 +48,7 @@ neuqOS
 │     │  ├── inode.rs
 │     │  └── mod.rs
 │     ├── lang_items.rs
-│     ├── linker-qemu.ld
+│     ├── linker-qemu.ld   #链接脚本
 │     ├── logging.rs
 │     ├── main.rs
 │     ├── mm               #内存管理
