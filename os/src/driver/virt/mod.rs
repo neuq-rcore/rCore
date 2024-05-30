@@ -51,7 +51,7 @@ unsafe impl Hal for VirtioHal {
         // we use identity mapping
         // Don't map to framed memory, use identity mapping
         // as the kernel is able to access all memory
-        NonNull::new((usize::from(paddr)) as *mut u8).unwrap()
+        NonNull::new(paddr as *mut u8).unwrap()
     }
 
     unsafe fn share(

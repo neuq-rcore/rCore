@@ -17,6 +17,7 @@ use virtio_drivers::transport::mmio::{MmioTransport, VirtIOHeader};
 pub struct Fat32FileSystem;
 
 impl Fat32FileSystem {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new(device_id: usize) -> FileSystem<Fat32IO, NullTimeProvider, LossyOemCpConverter> {
         let pa = VIRTIO0 + device_id * 0x1000;
 

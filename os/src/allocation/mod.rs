@@ -20,7 +20,7 @@ impl<'a, T> RefOrValue<'a, T> {
     pub fn as_ref(&self) -> &T {
         match self {
             RefOrValue::Ref(r) => r,
-            RefOrValue::Value(v) => &v,
+            RefOrValue::Value(v) => v,
         }
     }
 }

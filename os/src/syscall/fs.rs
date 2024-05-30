@@ -46,7 +46,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 
             if inner.fd_table.get(fd as usize).is_none() {
                 for dups in inner.dup_fds.iter() {
-                    if dups.1 == fd as isize {
+                    if dups.1 == fd {
                         return sys_write(dups.0 as usize, buf, len);
                     }
                 }
@@ -78,16 +78,16 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
                         .as_file()
                         .write_all(buf)
                     {
-                        Ok(_) => return len as isize,
+                        Ok(_) => len as isize,
                         Err(_) => {
                             info!("Dummy implementation for sys_write, write failed");
-                            return 0;
+                            0
                         }
                     }
                 }
                 _ => {
                     info!("Dummy implementation for sys_write, file not exist");
-                    return 0;
+                    0
                 }
             }
         }
@@ -131,11 +131,10 @@ pub fn sys_read(fd: usize, buf: *mut u8, len: usize) -> isize {
                 }
             }
         }
-        _ => return -1,
+        _ => -1,
     }
 }
 
-#[no_mangle]
 pub fn sys_open(path: *const u8, flags: u32) -> isize {
     info!("sys_open: path={:?}, flags={:#016b}", path, flags);
     let flags = OpenFlags::from_bits(flags);
@@ -172,79 +171,81 @@ pub fn sys_open(path: *const u8, flags: u32) -> isize {
 
                 info!("allocated fd: {}", idx);
 
+                idx as isize
+            } else if flags.contains(OpenFlags::CREATE) {
+                info!("Path: {:?}", path);
+                let mut relative_to_root: String = match path.starts_with('/') {
+                    true => path,
+                    false => {
+                        let mut cwd = inner.cwd.as_str();
+
+                        if cwd.ends_with('/') {
+                            cwd = &cwd[..cwd.len() - 1];
+                        }
+
+                        if let Some(stripped) = path.strip_prefix("./") {
+                            format!("{}/{}", cwd, path)
+                        } else {
+                            format!("{}/{}", cwd, path)
+                        }
+                    }
+                };
+
+                relative_to_root = relative_to_root
+                    .trim_start_matches('/')
+                    // FIXME: this is a hack, it should be trimmed above
+                    .trim_start_matches("./")
+                    .to_string();
+
+                info!("Creating file: {}", relative_to_root);
+
+                let is_dir = flags.contains(OpenFlags::DIRECTORY);
+
+                if (!is_dir
+                    && get_fs()
+                        .root_dir()
+                        .as_dir()
+                        .create_file(&relative_to_root)
+                        .is_err())
+                    || (get_fs()
+                        .root_dir()
+                        .as_dir()
+                        .create_dir(&relative_to_root)
+                        .is_err())
+                {
+                    // workaround not returning -1
+                    // FIXME
+                }
+
+                let mut avaliable_fd = inner
+                    .fd_table
+                    .iter_mut()
+                    .enumerate()
+                    .find(|(_, fd)| fd.is_none());
+
+                if avaliable_fd.is_none() {
+                    inner.fd_table.push(None);
+                    avaliable_fd =
+                        Some((inner.fd_table.len() - 1, inner.fd_table.last_mut().unwrap()));
+                }
+
+                let (idx, fd) = avaliable_fd.unwrap();
+
+                *fd = match is_dir {
+                    false => Some(FileDescriptor::open_file(
+                        relative_to_root.to_string(),
+                        flags,
+                    )),
+                    true => Some(FileDescriptor::open_dir(
+                        relative_to_root.to_string(),
+                        flags,
+                    )),
+                };
+                info!("allocated fd: {}, is_dir: {}", idx, is_dir);
+
                 return idx as isize;
             } else {
-                if flags.contains(OpenFlags::CREATE) {
-                    info!("Path: {:?}", path);
-                    let mut relative_to_root: String = match path.starts_with('/') {
-                        true => path,
-                        false => {
-                            let mut cwd = inner.cwd.as_str();
-
-                            if cwd.ends_with('/') {
-                                cwd = &cwd[..cwd.len() - 1];
-                            }
-
-                            if path.starts_with("./") {
-                                format!("{}/{}", cwd, &path[2..])
-                            } else {
-                                format!("{}/{}", cwd, path)
-                            }
-                        }
-                    };
-
-                    relative_to_root = relative_to_root.trim_start_matches('/').to_string();
-
-                    info!("Creating file: {}", relative_to_root);
-
-                    let is_dir = flags.contains(OpenFlags::DIRECTORY);
-
-                    if (!is_dir
-                        && get_fs()
-                            .root_dir()
-                            .as_dir()
-                            .create_file(&relative_to_root)
-                            .is_err())
-                        || (get_fs()
-                            .root_dir()
-                            .as_dir()
-                            .create_dir(&relative_to_root)
-                            .is_err())
-                    {
-                        // workaround not returning -1
-                        // FIXME
-                    }
-
-                    let mut avaliable_fd = inner
-                        .fd_table
-                        .iter_mut()
-                        .enumerate()
-                        .find(|(_, fd)| fd.is_none());
-
-                    if avaliable_fd.is_none() {
-                        inner.fd_table.push(None);
-                        avaliable_fd =
-                            Some((inner.fd_table.len() - 1, inner.fd_table.last_mut().unwrap()));
-                    }
-
-                    let (idx, fd) = avaliable_fd.unwrap();
-
-                    *fd = match is_dir {
-                        false => Some(FileDescriptor::open_file(
-                            relative_to_root.to_string(),
-                            flags,
-                        )),
-                        true => Some(FileDescriptor::open_dir(
-                            relative_to_root.to_string(),
-                            flags,
-                        )),
-                    };
-                    info!("allocated fd: {}, is_dir: {}", idx, is_dir);
-
-                    return idx as isize;
-                } else {
-                    return -1;
-                }
+                return -1;
             }
         }
     }
@@ -359,11 +360,11 @@ pub fn sys_fstat(fd: usize, buf: *mut u8) -> isize {
 
             0
         }
-        _ => return -1,
+        _ => -1,
     }
 }
 
-pub fn sys_unlinkat(cwd_fd: isize, path: *const u8, flags: u32) -> isize {
+pub fn sys_unlinkat(cwd_fd: isize, path: *const u8, _flags: u32) -> isize {
     match cwd_fd {
         -100 => sys_unlink(path),
         _ => {
@@ -384,15 +385,21 @@ fn sys_unlink(path: *const u8) -> isize {
     let token = task.token();
     let path = PageTable::translate_string(token, path, 1024);
 
-    let path = if path.starts_with('/') {
-        &path[1..]
-    } else if path.starts_with("./") {
-        &path[2..]
+    let path = if let Some(stripped) = path.strip_prefix('/') {
+        stripped
+    } else if let Some(stripped) = path.strip_prefix("./") {
+        stripped
     } else {
         &path
     };
 
     info!("unlink: {:?}", path);
+
+    // {
+    //     get_fs().root_dir().as_dir().iter().for_each(|entry| {
+    //         info!("entry: {:?}", entry.unwrap().file_name());
+    //     });
+    // }
 
     match get_fs().root_dir().as_dir().remove(path) {
         Ok(_) => 0,
@@ -421,10 +428,10 @@ fn sys_mkdir(path: *const u8, _mode: u32) -> isize {
     let token = task.token();
     let path = PageTable::translate_string(token, path, 1024);
 
-    let path = if path.starts_with('/') {
-        &path[1..]
-    } else if path.starts_with("./") {
-        &path[2..]
+    let path = if let Some(stripped) = path.strip_prefix('/') {
+        stripped
+    } else if let Some(stripped) = path.strip_prefix("./") {
+        stripped
     } else {
         &path
     };
@@ -466,7 +473,7 @@ pub fn sys_getdents(fd: isize, p_dent: *mut u8, len: usize) -> isize {
         d_off: 0,
         d_reclen: 0,
         d_type: 0,
-        d_name: ['t' as u8, 'e' as u8, 's' as u8, 't' as u8, 0],
+        d_name: [b't', b'e', b's', b't', 0],
     };
 
     PageTable::copy_to_space(token, &dents as *const _ as *const u8, p_dent, len);
