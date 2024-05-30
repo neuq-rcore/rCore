@@ -6,7 +6,6 @@ pub struct TaskContext {
     ra: usize,
     sp: usize,
     s: [usize; 12],
-
 }
 
 impl TaskContext {
@@ -14,7 +13,7 @@ impl TaskContext {
         Self {
             ra: 0,
             sp: 0,
-            s: [0; 12]
+            s: [0; 12],
         }
     }
 

@@ -2,7 +2,11 @@ use alloc::collections::BTreeSet;
 use lazy_static::lazy_static;
 use log::*;
 
-use crate::{config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE}, mm::{MapPermission, VirtAddr, KERNEL_SPACE}, sync::UPSafeCell};
+use crate::{
+    config::{KERNEL_STACK_SIZE, PAGE_SIZE, TRAMPOLINE},
+    mm::{MapPermission, VirtAddr, KERNEL_SPACE},
+    sync::UPSafeCell,
+};
 
 #[derive(Debug, PartialEq)]
 pub struct PidHandle(pub usize);
@@ -180,7 +184,7 @@ pub mod tests {
         {
             let _p1 = super::pid_alloc();
             let _p2 = super::pid_alloc();
-            
+
             assert_eq!(_p2.0, 2);
 
             // drop pids
@@ -213,8 +217,7 @@ pub mod tests {
 }
 
 lazy_static! {
-    static ref PID_ALLOCATOR: UPSafeCell<PidManager> =
-        UPSafeCell::new(PidManager::new());
+    static ref PID_ALLOCATOR: UPSafeCell<PidManager> = UPSafeCell::new(PidManager::new());
 }
 
 pub fn pid_alloc() -> PidHandle {
@@ -247,23 +250,23 @@ impl KernelStack {
         let pid = pid_handle.0;
         let (kernel_stack_bottom, kernel_stack_top) = kernel_stack_position(pid);
 
-        KERNEL_SPACE
-            .exclusive_access()
-            .insert_framed_area(
-                kernel_stack_bottom.into(),
-                kernel_stack_top.into(),
-                MapPermission::R | MapPermission::W,
-            );
+        KERNEL_SPACE.exclusive_access().insert_framed_area(
+            kernel_stack_bottom.into(),
+            kernel_stack_top.into(),
+            MapPermission::R | MapPermission::W,
+        );
 
-        KernelStack {
-            pid: pid_handle.0,
-        }
+        KernelStack { pid: pid_handle.0 }
     }
-    pub fn push_on_top<T>(&self, value: T) -> *mut T where
-        T: Sized, {
+    pub fn push_on_top<T>(&self, value: T) -> *mut T
+    where
+        T: Sized,
+    {
         let kernel_stack_top = self.top();
         let ptr_mut = (kernel_stack_top - core::mem::size_of::<T>()) as *mut T;
-        unsafe { *ptr_mut = value; }
+        unsafe {
+            *ptr_mut = value;
+        }
         ptr_mut
     }
     pub fn top(&self) -> usize {

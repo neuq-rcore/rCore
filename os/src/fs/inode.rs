@@ -44,19 +44,35 @@ pub struct FileDescriptor {
 
 impl FileDescriptor {
     pub fn open_dir(path: String, flags: OpenFlags) -> Self {
-        Self { flags, path, file_type: FileType::Dir }
+        Self {
+            flags,
+            path,
+            file_type: FileType::Dir,
+        }
     }
 
     pub fn open_file(path: String, flags: OpenFlags) -> Self {
-        Self { flags, path, file_type: FileType::File }
+        Self {
+            flags,
+            path,
+            file_type: FileType::File,
+        }
     }
 
     pub fn open_char_device(path: String, flags: OpenFlags) -> Self {
-        Self { flags, path, file_type: FileType::CharDevice }
+        Self {
+            flags,
+            path,
+            file_type: FileType::CharDevice,
+        }
     }
-    
+
     pub fn open(path: String, flags: OpenFlags) -> Self {
-        Self { flags, path, file_type: FileType::Undetermined }
+        Self {
+            flags,
+            path,
+            file_type: FileType::Undetermined,
+        }
     }
 
     pub fn open_stdin() -> Self {

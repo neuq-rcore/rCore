@@ -42,7 +42,7 @@ pub struct TaskControlBlockInner {
     pub heap_pos: usize,
     pub dup_fds: [(isize, isize); 10],
     pub fd_table: Vec<Option<FileDescriptor>>,
-    pub mmap_workaround: Vec<(usize, usize)> // fd, ptr
+    pub mmap_workaround: Vec<(usize, usize)>, // fd, ptr
 }
 
 impl Drop for TaskControlBlock {

@@ -43,7 +43,7 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 
             // handle dup fd
             let inner = task.shared_inner();
-            
+
             if inner.fd_table.get(fd as usize).is_none() {
                 for dups in inner.dup_fds.iter() {
                     if dups.1 == fd as isize {
@@ -53,7 +53,6 @@ pub fn sys_write(fd: usize, buf: *const u8, len: usize) -> isize {
 
                 warn!("Unsupported fd in sys_write!, fd={}", fd);
             }
-
 
             let fd_entry = inner.fd_table[fd as usize].as_ref();
             if fd_entry.is_none() {

@@ -5,7 +5,7 @@
     slice_from_ptr_range,
     naked_functions,
     alloc_error_handler,
-    vec_into_raw_parts,
+    vec_into_raw_parts
 )]
 
 use core::{arch::asm, slice};
@@ -44,9 +44,9 @@ mod trap;
 fn main() {
     let test_cases = vec![
         "execve",
-        "mmap", // Not implemented
+        "mmap",   // Not implemented
         "munmap", // Not implemented
-        "dup", // Don't know why this test is easily left out, so we put it in the first place
+        "dup",    // Don't know why this test is easily left out, so we put it in the first place
         "brk",
         "chdir",
         "clone",
