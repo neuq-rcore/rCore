@@ -6,7 +6,11 @@ use crate::task::pid::try_gc_pid_allocator;
 use crate::{sync::UPSafeCell, trap::TrapContext};
 
 use super::TaskManager::fetch_task;
-use super::{switch::__switch, task::{TaskControlBlock, TaskStatus}, TaskContext};
+use super::{
+    switch::__switch,
+    task::{TaskControlBlock, TaskStatus},
+    TaskContext,
+};
 
 pub struct Processor {
     current: Option<Arc<TaskControlBlock>>,
@@ -29,7 +33,6 @@ impl Processor {
         self.current.as_ref().map(|task| Arc::clone(task))
     }
 }
-
 
 impl Processor {
     fn get_idle_task_cx_ptr(&mut self) -> *mut TaskContext {
@@ -73,10 +76,7 @@ pub fn run_tasks() {
         // stop exclusively accessing processor manually
         drop(processor);
         unsafe {
-            __switch(
-                idle_task_cx_ptr,
-                next_task_cx_ptr,
-            );
+            __switch(idle_task_cx_ptr, next_task_cx_ptr);
         }
     }
     try_gc_pid_allocator();
@@ -88,9 +88,6 @@ pub fn schedule(switched_task_cx_ptr: *mut TaskContext) {
     let idle_task_cx_ptr = processor.get_idle_task_cx_ptr();
     drop(processor);
     unsafe {
-        __switch(
-            switched_task_cx_ptr,
-            idle_task_cx_ptr,
-        );
+        __switch(switched_task_cx_ptr, idle_task_cx_ptr);
     }
 }

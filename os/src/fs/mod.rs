@@ -1,4 +1,7 @@
-use crate::{allocation::RefOrValue, fat32::{Fat32FileSystem, Fat32IO}};
+use crate::{
+    allocation::RefOrValue,
+    fat32::{Fat32FileSystem, Fat32IO},
+};
 use alloc::{string::String, sync::Arc, vec::Vec};
 use fatfs::{Dir, File, FileSystem, LossyOemCpConverter, NullTimeProvider, Read};
 use lazy_static::lazy_static;
@@ -41,7 +44,6 @@ impl RootFs {
         Fat32Dir::from_root(self.fs.root_dir())
     }
 }
-
 
 pub struct Fat32File<'a> {
     inner: FatfsEntry<'a>,
@@ -168,7 +170,7 @@ impl<'a> Fat32Dir<'a> {
                         Some(p) => {
                             curr = p;
                             next_path = paths.next();
-                        },
+                        }
                     }
                 }
 
@@ -185,7 +187,7 @@ impl<'a> Fat32Dir<'a> {
                             Some(dir) => {
                                 cwd = RefOrValue::from_value(dir);
                                 curr = next_path.unwrap();
-                            },
+                            }
                         },
                     }
                 }
@@ -199,7 +201,7 @@ impl<'a> Fat32Dir<'a> {
         let path = if path.starts_with('.') && path.len() > 2 {
             &path[2..]
         } else if path.starts_with('/') {
-               &path[1..]
+            &path[1..]
         } else {
             path
         };
@@ -235,7 +237,7 @@ impl<'a> Fat32Dir<'a> {
         let path = if path.starts_with('.') && path.len() > 2 {
             &path[2..]
         } else if path.starts_with('/') {
-               &path[1..]
+            &path[1..]
         } else {
             path
         };
