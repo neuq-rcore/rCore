@@ -1,14 +1,12 @@
 .PHONY: clippy clippy-% all test test-inner parse dummy-run dummy-test
 
 all:
-# Temporarily enable user program build to make CI pass
-#	@cd user && make -s build
 	@cd os && make -s release
 
 	@cp os/target/riscv64gc-unknown-none-elf/release/os.bin kernel-qemu
 	@cp bootloader/opensbi-qemu.bin sbi-qemu
 
-clippy: clippy-user clippy-os
+clippy: clippy-os
 
 clippy-%:
 	cd $* && cargo clippy --all-features
@@ -40,8 +38,6 @@ dummy-test: dummy-run parse
 clean:
 	@echo -e "\e[1;33m=> Cleaning os...\e[0m"
 	@cd os && make -s clean
-	@echo -e "\e[1;33m=> Cleaning user...\e[0m"
-	@cd user && make -s clean
 	@echo -e "\e[1;33m=> Cleaning all outputs/dependencies...\e[0m"
 	rm -f sbi-qemu kernel-qemu
 	@echo -e "\e[1;33m=> Cleaning test results\e[0m"
