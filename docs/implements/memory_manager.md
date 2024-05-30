@@ -203,4 +203,84 @@ pub struct PageTable {
 
 ## 模块 `mm`
 
+`MapType` 是枚举类型，表示映射方式，其定义如下：
+
+```rust
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub enum MapType {
+    Identical,  // 恒等映射
+    Framed,     // 物理页帧分配
+}
+```
+
+`MapPermission` 是位标志结构体，表示控制访问方式，仅保留 4 个[位标志](#模块-page)，其定义如下：
+
+```rust
+bitflags! {
+    #[derive(Clone, Copy)]
+    pub struct MapPermission: u8 {
+        const R = 1 << 1;
+        const W = 1 << 2;
+        const X = 1 << 3;
+        const U = 1 << 4;
+    }
+}
+```
+
+`MapArea` 结构体是对一段连续的虚拟内存映射区域的抽象：
+
+```rust
+pub struct MapArea {
+    range: Range<VirtPageNum>,                          // 维护的虚拟页码范围
+    data_frames: BTreeMap<VirtPageNum, TrackedFrame>,   // 虚拟页码和物理页码的映射关系
+    map_type: MapType,                                  // 映射方式
+    permission: MapPermission,                          // 控制访问方式
+}
+```
+
+其函数如下：
+
+- **vpn_range(&self)**: 返回虚拟页码范围。
+
+- **from_another(them: &MapArea)**: 构造函数，返回传入 `MapArea` 的拷贝。
+
+- **new(start_va: VirtAddr, end_va: VirtAddr, map_type: MapType, permission: MapPermission)**: 构造函数，其中 `start_va` 和 `end_va` 构成 range 。
+
+- **map_page(&mut self, page_table: &mut PageTable, vpn: VirtPageNum)**: 为给定的虚拟页码分配物理页码并构建它们的映射关系。
+
+- **unmap_page(&mut self, page_table: &mut PageTable, vpn: VirtPageNum)**: 释放给定的虚拟页码对应的物理页帧，解除映射关系。
+
+- **map_many(&mut self, page_table: &mut PageTable)**: 为 `range` 内的所有虚拟页码分配物理页码，构建映射关系。
+
+- **unmap_many(&mut self, page_table: &mut PageTable)**: 释放 `range` 内的所有虚拟页码对应的物理页帧，解除映射关系。
+
+- **copy_data(&mut self, page_table: &mut PageTable, data: &[u8])**: 将一段内存数据通过虚拟内存的方式储存在内存中，为其分配虚拟页码和物理页码，以及映射关系。
+
+`MemorySpace` 结构体表示整个内存空间，其定义如下：
+
+```rust
+pub struct MemorySpace {
+    page_table: PageTable,  // 页表
+    areas: Vec<MapArea>,    // 所有映射区域
+}
+```
+
+其对外公开的函数如下：
+
+- **table(&self)**: 返回 `page_table` 。
+
+- **new_empty()**: 构造一个空的 `MemorySpace` 并返回。
+
+- **token(&self)**: 返回 `page_table` 的 token 。
+
+- **insert_framed_area(&mut self, start_va: VirtAddr, end_va: VirtAddr, permission: MapPermission)**: 插入一个 `MapArea` 映射区域。
+
+- **map_trampoline(&mut self)**：构建 `trampoline` 段的映射关系，它并没有存在于 `area` 中。
+
+- **remove_area_with_start_vpn(&mut self, start_vpn: VirtPageNum)**: 移除以 `start_vpn` 为起点的 `MapArea` 映射区域。
+
+- **clear(&mut self)**: 清空所有 `MapArea` 映射区域。
+
+- **from_existed_space(them_space: &MemorySpace)**: 构造函数，返回传入 `MemorySpace` 的拷贝。
+
 
