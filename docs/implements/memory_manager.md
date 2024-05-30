@@ -56,7 +56,7 @@
 
 `VirtPageNum` 的函数如下：
 
-- **into_indices(&self)**: 取出虚拟页号的三级页索引。
+- **indices(&self)**: 取出虚拟页号的三级页索引。
 
 ## 模块 `frame`
 
