@@ -135,9 +135,9 @@ pub enum FileType {
 
 - **open(path: String, flags: OpenFlags)**: 使用指定的描述符打开未定义类型的文件。
 
-- **open_stdin()** 打开一般输入流。
+- **open_stdin()** 打开标准输入流。
 
-- **open_stdout()**: 打开一般输出流。
+- **open_stdout()**: 打开标准输出流。
 
 - **open_stderr()**: 打开错误输出流。
 
