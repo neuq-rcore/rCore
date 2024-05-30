@@ -7,6 +7,10 @@
     alloc_error_handler,
     vec_into_raw_parts
 )]
+#![allow(clippy::uninit_vec)]
+#![allow(unused)]
+// When we have multiple if-else branches, all branches must be `if let Some()`
+#![allow(clippy::manual_strip)]
 
 use core::{arch::asm, slice};
 
@@ -43,7 +47,7 @@ fn main() {
         "execve",
         "mmap",
         "munmap",
-        "dup",    // Don't know why this test is easily left out, so we put it in the first place
+        "dup", // Don't know why this test is easily left out, so we put it in the first place
         "brk",
         "chdir",
         "clone",

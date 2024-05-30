@@ -32,6 +32,7 @@ unsafe impl Send for RootFs {}
 
 impl RootFs {
     pub fn new(device_id: usize) -> Self {
+        #[allow(clippy::arc_with_non_send_sync)]
         let fs = Arc::new(Fat32FileSystem::new(device_id));
         Self { fs }
     }
@@ -156,7 +157,7 @@ impl<'a> Fat32Dir<'a> {
     // but it ensure that the parent directory is valid
     // Also, if the parent directory is the root/current directory, it will return None as we can;t return a copy of the root/current directory
     pub fn get_parent_dir(&self, path: &str) -> Result<Fat32Dir<'a>, GetParentDirError> {
-        let mut paths = path.split('/').into_iter();
+        let mut paths = path.split('/');
         let first_path = paths.next();
         let mut next_path = paths.next();
 
@@ -176,7 +177,7 @@ impl<'a> Fat32Dir<'a> {
 
                 let mut cwd: RefOrValue<Fat32Dir> = RefOrValue::from_ref(self);
 
-                while let Some(_) = next_path {
+                while next_path.is_some() {
                     // next of next
                     next_path = paths.next();
 
@@ -211,7 +212,7 @@ impl<'a> Fat32Dir<'a> {
             return None;
         }
 
-        let mut paths = path.split('/').into_iter();
+        let mut paths = path.split('/');
         let mut next_path = paths.next();
         let mut cwd = RefOrValue::from_ref(self);
 
@@ -247,7 +248,7 @@ impl<'a> Fat32Dir<'a> {
             return None;
         }
 
-        let mut paths = path.split('/').into_iter();
+        let mut paths = path.split('/');
         let mut next_path = paths.next();
         let mut cwd = RefOrValue::from_ref(self);
 
@@ -292,7 +293,7 @@ impl<'a> Fat32Dir<'a> {
     pub fn probe_path(&self, path: &str) -> Option<FileType> {
         info!("Probing path: {}", path);
         if path == "." {
-            return Some(FileType::Dir);
+            Some(FileType::Dir)
         } else if self.get_file(path).is_some() {
             Some(FileType::File)
         } else if self.get_dir(path).is_some() {
@@ -303,12 +304,7 @@ impl<'a> Fat32Dir<'a> {
     }
 
     pub fn all_entries(&self) -> Vec<FatfsEntry> {
-        self.as_dir()
-            .iter()
-            .map(|e| e.ok())
-            .filter(|e| e.is_some())
-            .map(|e| e.unwrap())
-            .collect()
+        self.as_dir().iter().filter_map(|e| e.ok()).collect()
     }
 }
 

@@ -186,7 +186,7 @@ impl From<VirtAddr> for VirtPageNum {
 impl VirtPageNum {
     // 取出虚拟页号的三级页索引
     // Returns: [PPN0, PPN1, PPN2]
-    pub fn into_indices(&self) -> [usize; 3] {
+    pub fn indices(&self) -> [usize; 3] {
         let mut vpn = self.0;
         let mut idx = [0usize; 3];
         for i in (0..3).rev() {

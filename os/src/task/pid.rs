@@ -83,11 +83,11 @@ impl PidManager {
         let mut iter = self.recycled.iter();
 
         match iter.next() {
-            None => return, // fast path
+            None => (), // fast path
             Some(&pid) => {
                 let mut curr = pid;
 
-                while let Some(&pid) = iter.next() {
+                for &pid in iter {
                     if pid != curr + 1 {
                         return;
                     }

@@ -1,5 +1,4 @@
 use alloc::{slice, string::String, vec::Vec};
-use log::debug;
 
 use crate::config::PAGE_SIZE;
 
@@ -47,7 +46,7 @@ impl PageTable {
 
 impl PageTable {
     pub fn get_entry(&self, vpn: VirtPageNum) -> Option<&mut PageTableEntry> {
-        let indices = vpn.into_indices();
+        let indices = vpn.indices();
         let mut ppn = self.root_ppn;
 
         let entry = Option::None;
@@ -71,7 +70,7 @@ impl PageTable {
     }
 
     pub fn get_create_entry(&mut self, vpn: VirtPageNum) -> &mut PageTableEntry {
-        let indices = vpn.into_indices();
+        let indices = vpn.indices();
         let mut ppn = self.root_ppn;
 
         let mut entry: &mut PageTableEntry;

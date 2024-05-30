@@ -21,9 +21,9 @@ pub fn init() {
 
 fn set_user_trap() {
     debug!("Entering user trap mode");
-    let user_trap_va = TRAMPOLINE + (__snap_trap as usize - __snap_trap as usize);
+    let user_trap_va = TRAMPOLINE; // + (__snap_trap as usize - __snap_trap as usize);
     unsafe {
-        stvec::write(user_trap_va as usize, TrapMode::Direct);
+        stvec::write(user_trap_va, TrapMode::Direct);
     }
 }
 

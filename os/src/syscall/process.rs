@@ -147,7 +147,6 @@ pub fn sys_clone(flags: usize, sp: usize, ptid: usize) -> isize {
     child_pid as isize
 }
 
-#[no_mangle]
 pub fn sys_exec(pathname: *const u8, _argv: *const *const u8, _envp: *const *const u8) -> isize {
     let task = current_task().unwrap();
     let token = current_user_token();
@@ -161,8 +160,8 @@ pub fn sys_exec(pathname: *const u8, _argv: *const *const u8, _envp: *const *con
         },
     };
 
-    let pathname = if pathname.starts_with('/') {
-        &pathname[1..]
+    let pathname = if let Some(stripped) = pathname.strip_prefix('/') {
+        stripped
     } else {
         &pathname
     };

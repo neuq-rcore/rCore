@@ -261,6 +261,7 @@ impl MapArea {
 pub struct KernelSpace;
 
 impl KernelSpace {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> MemorySpace {
         extern "C" {
             fn stext();
