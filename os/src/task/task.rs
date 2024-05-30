@@ -42,7 +42,7 @@ pub struct TaskControlBlockInner {
     pub heap_pos: usize,
     pub dup_fds: [(isize, isize); 10],
     pub fd_table: Vec<Option<FileDescriptor>>,
-    pub mmap_workaround: Vec<(usize, usize)> // fd, ptr
+    pub mmap_workaround: Vec<(usize, usize)>, // fd, ptr
 }
 
 impl Drop for TaskControlBlock {
@@ -109,11 +109,11 @@ impl TaskControlBlock {
         self.exclusive_inner().task_status = new_status
     }
 
-    pub fn task_ctx_mut<'a>(&'a mut self) -> &'a mut TaskContext {
+    pub fn task_ctx_mut(&mut self) -> &mut TaskContext {
         unsafe { &mut *(&mut self.exclusive_inner().task_ctx as *mut TaskContext) }
     }
 
-    pub fn task_ctx<'a>(&'a self) -> &'a TaskContext {
+    pub fn task_ctx(&self) -> &TaskContext {
         unsafe { &*(&self.shared_inner().task_ctx as *const TaskContext) }
     }
 }
@@ -162,13 +162,11 @@ impl TaskControlBlock {
             trap_handler as usize,
         );
 
-        let control_block = TaskControlBlock {
+        TaskControlBlock {
             inner: UPSafeCell::new(control_block_inner),
             pid,
             kernel_stack,
-        };
-
-        control_block
+        }
     }
 
     pub fn pid(&self) -> usize {
@@ -225,7 +223,7 @@ impl TaskControlBlock {
             exit_code: 0,
             cwd: parent_inner.cwd.clone(),
             heap_pos: 0,
-            dup_fds: parent_inner.dup_fds.clone(),
+            dup_fds: parent_inner.dup_fds,
             fd_table: parent_inner.fd_table.clone(),
             mmap_workaround: parent_inner.mmap_workaround.clone(),
         });

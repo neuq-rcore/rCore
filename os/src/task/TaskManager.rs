@@ -6,9 +6,11 @@ use crate::sync::UPSafeCell;
 
 use super::task::TaskControlBlock;
 
+type WaitingTask = (Arc<TaskControlBlock>, Arc<dyn Fn() -> bool>);
+
 pub struct TaskManager {
     ready_queue: VecDeque<Arc<TaskControlBlock>>,
-    waiting_queue: VecDeque<(Arc<TaskControlBlock>, Arc<dyn Fn() -> bool>)>,
+    waiting_queue: VecDeque<WaitingTask>,
 }
 
 lazy_static! {
@@ -48,7 +50,8 @@ impl TaskManager {
 
     pub fn remove(&mut self, pid: usize) {
         self.ready_queue.retain(|task| task.pid() != pid);
-        self.waiting_queue.retain(|taskdesc| taskdesc.0.pid() != pid);
+        self.waiting_queue
+            .retain(|taskdesc| taskdesc.0.pid() != pid);
     }
 
     pub fn add_to_waiting(

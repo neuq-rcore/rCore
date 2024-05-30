@@ -5,8 +5,12 @@
     slice_from_ptr_range,
     naked_functions,
     alloc_error_handler,
-    vec_into_raw_parts,
+    vec_into_raw_parts
 )]
+#![allow(clippy::uninit_vec)]
+#![allow(unused)]
+// When we have multiple if-else branches, all branches must be `if let Some()`
+#![allow(clippy::manual_strip)]
 
 use core::{arch::asm, slice};
 
@@ -37,15 +41,12 @@ mod task;
 mod timer;
 mod trap;
 
-// Since we've implemented filesystem, we will soon migrate to test suits from sdcard image
-// global_asm!(include_str!("link_app.S"));
-
 #[no_mangle]
 fn main() {
     let test_cases = vec![
         "execve",
-        "mmap", // Not implemented
-        "munmap", // Not implemented
+        "mmap",
+        "munmap",
         "dup", // Don't know why this test is easily left out, so we put it in the first place
         "brk",
         "chdir",

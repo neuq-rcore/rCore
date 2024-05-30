@@ -2,15 +2,13 @@ mod context;
 
 use crate::config::{TRAMPOLINE, TRAP_CONTEXT};
 use crate::syscall::syscall;
-use crate::task::{
-    exit_current_and_run_next, suspend_current_and_run_next,
-};
 use crate::task::processor::{current_trap_ctx, current_user_token};
+use crate::task::{exit_current_and_run_next, suspend_current_and_run_next};
 use crate::timer::set_next_trigger;
 pub use context::TrapContext;
-use riscv::register::{mcause, mtval};
 use core::arch::asm;
 use log::{debug, warn};
+use riscv::register::{mcause, mtval};
 use riscv::register::{
     mtvec::TrapMode,
     scause::{self, Exception, Interrupt, Trap},
@@ -23,9 +21,9 @@ pub fn init() {
 
 fn set_user_trap() {
     debug!("Entering user trap mode");
-    let user_trap_va = TRAMPOLINE + (__snap_trap as usize - __snap_trap as usize);
+    let user_trap_va = TRAMPOLINE; // + (__snap_trap as usize - __snap_trap as usize);
     unsafe {
-        stvec::write(user_trap_va as usize, TrapMode::Direct);
+        stvec::write(user_trap_va, TrapMode::Direct);
     }
 }
 
@@ -55,11 +53,16 @@ pub fn trap_handler() -> ! {
         let scause = scause::read();
         let stval = stval::read();
         let mut ctx = current_trap_ctx();
-    
+
         match scause.cause() {
             Trap::Exception(Exception::UserEnvCall) => {
                 ctx.sepc += 4;
-                let result = syscall(ctx.x[17], [ctx.x[10], ctx.x[11], ctx.x[12], ctx.x[13], ctx.x[14], ctx.x[15]]) as usize;
+                let result = syscall(
+                    ctx.x[17],
+                    [
+                        ctx.x[10], ctx.x[11], ctx.x[12], ctx.x[13], ctx.x[14], ctx.x[15],
+                    ],
+                ) as usize;
                 ctx = current_trap_ctx();
                 ctx.x[10] = result;
             }
@@ -71,7 +74,10 @@ pub fn trap_handler() -> ! {
                 exit_current_and_run_next(-2);
             }
             Trap::Exception(Exception::IllegalInstruction) => {
-                println!("[kernel] IllegalInstruction in application, kernel killed it. PC: {:#x}", ctx.sepc);
+                println!(
+                    "[kernel] IllegalInstruction in application, kernel killed it. PC: {:#x}",
+                    ctx.sepc
+                );
                 exit_current_and_run_next(-3);
             }
             Trap::Interrupt(Interrupt::SupervisorTimer) => {
@@ -146,7 +152,11 @@ unsafe extern "C" fn on_kernel_trap() -> ! {
 fn kernel_trap_intenral() -> ! {
     let mcause = mcause::read();
     let mtval = mtval::read();
-    panic!("Exception from kernelscause: {}, stval: {:#x}", mcause.bits(), mtval);
+    panic!(
+        "Exception from kernelscause: {}, stval: {:#x}",
+        mcause.bits(),
+        mtval
+    );
 }
 
 #[naked]
@@ -244,8 +254,8 @@ pub unsafe extern "C" fn __snap_trap() -> ! {
 #[naked]
 #[no_mangle]
 #[link_section = ".text.trampoline"]
-pub unsafe extern "C" fn __restore_snap(/*snaped_context: *const TrapContext, user_token: usize*/) -> !
-{
+pub unsafe extern "C" fn __restore_snap(/*snaped_context: *const TrapContext, user_token: usize*/
+) -> ! {
     // see `__snap_trap` for the stack layout
     asm!(
         // Return to user space(but still in Supervisor mode)

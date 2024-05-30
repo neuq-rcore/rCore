@@ -14,7 +14,7 @@ trait IFrameAllocator {
 
 lazy_static! {
     pub static ref FRAME_ALLOCATOR: UPSafeCell<StackedFrameAllocator> =
-        unsafe { UPSafeCell::new(StackedFrameAllocator::new()) };
+        UPSafeCell::new(StackedFrameAllocator::new());
 }
 
 pub fn init() {

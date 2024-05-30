@@ -156,9 +156,19 @@ impl MemorySpace {
             this_space.push(new_area, None);
             // copy data from another space
             for vpn in area.vpn_range() {
-                let src_ppn = them_space.page_table.translate(VirtPageNum::from(vpn)).unwrap().ppn();
-                let dst_ppn = this_space.page_table.translate(VirtPageNum::from(vpn)).unwrap().ppn();
-                dst_ppn.as_page_bytes_slice().copy_from_slice(src_ppn.as_page_bytes_slice());
+                let src_ppn = them_space
+                    .page_table
+                    .translate(VirtPageNum::from(vpn))
+                    .unwrap()
+                    .ppn();
+                let dst_ppn = this_space
+                    .page_table
+                    .translate(VirtPageNum::from(vpn))
+                    .unwrap()
+                    .ppn();
+                dst_ppn
+                    .as_page_bytes_slice()
+                    .copy_from_slice(src_ppn.as_page_bytes_slice());
             }
         }
 
@@ -251,6 +261,7 @@ impl MapArea {
 pub struct KernelSpace;
 
 impl KernelSpace {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> MemorySpace {
         extern "C" {
             fn stext();

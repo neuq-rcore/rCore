@@ -10,7 +10,7 @@
 
 ## 项目结构说明
 
-- [内存管理器](implements/memory_manager.md)
+- [内存管理](implements/memory_manager.md)
 
 - [进程管理器](implements/process_manager.md)
 
