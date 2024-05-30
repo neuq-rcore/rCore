@@ -283,4 +283,29 @@ pub struct MemorySpace {
 
 - **from_existed_space(them_space: &MemorySpace)**: 构造函数，返回传入 `MemorySpace` 的拷贝。
 
+懒静态引用 `KERNEL_SPACE` 是对 `MemorySpace` 的单例包装：
 
+```rust
+lazy_static! {
+    /// a memory set instance through lazy_static! managing kernel space
+    pub static ref KERNEL_SPACE: Arc<UPSafeCell<MemorySpace>> =
+        Arc::new(UPSafeCell::new(KernelSpace::new()));
+}
+```
+
+模块中顶层函数 `kernrel_token` 是对 `MemorySpace::token()` 的包装。
+
+`KernelSpace` 结构体用于管理内核地址空间，其函数如下：
+
+- **new()**: 构建了 `stext` , `etextsrodata` , `erodata` , `sdata` , `edata` , `sbss` , `ebss` , `ekernel` 段的映射，各段的控制访问方式如下：
+
+| 位标志/段 | text | rodata | data | bss | kernel |
+|:---------:|:----:|:------:|:----:|:---:|:------:|
+| R         | ✔️    | ✔️      | ✔️    | ✔️   | ✔️      |
+| W         | ❌   | ❌     | ✔️    | ✔️   | ✔️      |
+| X         | ✔️    | ❌     | ❌   | ❌  | ❌     |
+| U         | ❌   | ❌     | ❌   | ❌  | ❌     |
+
+CPU 只能在 S 特权级访问。
+
+- **activate()**: 激活内核地址空间。
