@@ -18,6 +18,10 @@ replace-with = "vendored-sources"
 git = "https://github.com/neuq-rcore/rust-fatfs"
 replace-with = "vendored-sources"
 
+[source."git+https://github.com/neuq-rcore/visionfive2-sd.git"]
+git = "https://github.com/neuq-rcore/visionfive2-sd.git"
+replace-with = "vendored-sources"
+
 [source."git+https://github.com/nrc/xmas-elf.git"]
 git = "https://github.com/nrc/xmas-elf.git"
 replace-with = "vendored-sources"
@@ -27,4 +31,4 @@ git = "https://github.com/rcore-os/riscv"
 replace-with = "vendored-sources"
 
 [source.vendored-sources]
-directory = "../thirdparty/"
+directory = "../thirdparty"
