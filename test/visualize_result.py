@@ -57,6 +57,8 @@ def visualize(data):
     print()
     print("Raw test result and kernel output will be uploaded to the artifacts")
 
+    return score == total_scores
+
 def read_output(file_name: str):
     with open(file_name, "r") as file:
         return file.read()
@@ -76,4 +78,7 @@ if __name__ == '__main__':
     print(r"   | |  __/\__ \ |_                  ")
     print(r"   |_|\___||___/\__|                 ")
     print("Result:")
-    visualize(data)
+    res = visualize(data)
+
+    if not res:
+        exit(1)
