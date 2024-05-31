@@ -10,6 +10,8 @@
 
 ## 项目结构说明
 
+- [SBI 串口输出](implements/sbi_output.md)
+
 - [内存管理](implements/memory_manager.md)
 
 - [进程管理器](implements/process_manager.md)
