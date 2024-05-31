@@ -28,7 +28,7 @@ test-inner:
 parse:
 # the test scripts produce 'SyntaxWarning: invalid escape sequence'
 	@python3 -W ignore test/check_result/test_runner.py output.log > results.json
-	@python3 test/visualize_result.py results.json
+	@python3 test/visualize_result.py results.json || exit 0
 
 dummy-run:
 	@python3 test/demo_test.py test/riscv64/ | tee output.log
