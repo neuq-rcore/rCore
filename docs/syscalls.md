@@ -14,7 +14,7 @@ fork          | :blush: |        |                |
 fstat         | :blush: |        |                |
 close         | :blush: |        |                |
 getcwd        | :blush: |        |                |
-getdents      | :blush: | :wink: |                |
+getdents      | :blush: |        |                |
 getpid        | :blush: |        |                |
 getppid       | :blush: |        |                |
 gettimeofday  | :blush: |        |                |

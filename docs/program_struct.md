@@ -4,27 +4,9 @@
 
 ```shell
 neuqOS
-├── bootloader
-│  ├── opensbi-qemu.bin
-│  ├── rustsbi-k210.bin
-│  └── rustsbi-qemu.bin
+├── bootloader            # SBI implementations
 ├── docs                  # 文档
-│  ├── assets
-│  │  ├── final_score_report.jpg
-│  │  ├── neuq.jpg
-│  │  └── visual_report.png
-│  ├── content.md
-│  ├── implements
-│  │  ├── device_manager.md
-│  │  ├── driver.md
-│  │  ├── file_system.md
-│  │  ├── file_system_api.md
-│  │  ├── memory_manager.md
-│  │  └── process_manager.md
-│  ├── language.md
-│  └── program_struct.md
-├── LICENSE
-├── log
+├── LICENSE               # 许可证
 ├── Makefile
 ├── os
 │  ├── Cargo.lock
@@ -86,25 +68,8 @@ neuqOS
 │        ├── context.rs   # 异常上下文处理
 │        ├── mod.rs
 │        └── trap.S
-├── prompt-generator.py
 ├── README.md
 ├── rust-toolchain.toml
-├── test
-├── thirdparty
-└── user
-   ├── build.py
-   ├── Cargo.lock
-   ├── Cargo.toml
-   ├── Makefile
-   └── src                # 测试脚本
-      ├── bin
-      │  ├── 00power_3.rs
-      │  ├── 01power_5.rs
-      │  ├── 02power_7.rs
-      │  └── 03sleep.rs
-      ├── console.rs
-      ├── lang_items.rs
-      ├── lib.rs
-      ├── linker-qemu.ld
-      └── syscall.rs
+├── test                   # 测试样例源码，二进制文件，测试脚本
+└── thirdparty             # 本地 Registries，用于OJ离线构建
 ```
