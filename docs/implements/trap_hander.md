@@ -30,15 +30,15 @@ pub struct TrapContext {
 
 其函数如下：
 
-- **set_sp(&mut self, sp: usize)**: 设置堆栈指针（x[2] 寄存器）。
+- **set_sp(&mut self, sp: usize)**: 设置堆栈指针（x[2] 寄存器）
 
-- **app_init_context(entry: usize, sp: usize, kernel_token: usize, kernel_sp: usize, trap_handler: usize)**: 构造函数， `sstatus` 的特权级设置为 U 。
+- **app_init_context(entry: usize, sp: usize, kernel_token: usize, kernel_sp: usize, trap_handler: usize)**: 构造函数， `sstatus` 的特权级设置为 U 
 
 # 模块 `trap`
 
 核心的函数是两个汇编函数：
 
-- **__snap_trap()**: 将栈上程序的当前状态保存至 `.text.trampoline` 。
+- **__snap_trap()**: 将栈上程序的当前状态保存至 `.text.trampoline` 
 
 - **__restore_snap**: 将 `.text.trampoline` 内容恢复到栈上。
 
