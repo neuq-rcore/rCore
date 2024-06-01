@@ -10,6 +10,8 @@
 
 ## 项目结构说明
 
+- [系统调用](syscalls.md)
+
 - [SBI 串口输出](implements/sbi_output.md)
 
 - [中断处理](implements/trap_hander.md)
