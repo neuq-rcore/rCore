@@ -14,15 +14,15 @@
 
 - `mm`: 虚拟内存的实现。
 
-- `heap`: 管理堆内存的分配。
+  - `heap`: 管理堆内存的分配。
 
-- `address`: 物理内存、虚拟内存、物理内存页号、虚拟内存页号的抽象。
+  - `address`: 物理内存、虚拟内存、物理内存页号、虚拟内存页号的抽象。
 
-- `frame`: 栈式物理页帧管理。
+  - `frame`: 栈式物理页帧管理。
 
-- `page`: 页表和页表项。
+  - `page`: 页表和页表项。
 
-## 模块 (heap)
+## 模块 `heap`
 
 静态全局变量 `HEAP_ALLOCATOR` 是 `LockedHeap` 的实例，编译时会被链接至 `.bss.heap` 块，使用了 Attribute `#[global_allocator]` ，表示它作为 **全局内存分配器** 。
 
@@ -32,7 +32,7 @@
 
 - **init()**: 初始化堆内存，占用空间大小为 `KERNEL_HEAP_SIZE`。
 
-## 模块 (address)
+## 子模块 `address`
 
 `PhysAddr` 和 `VirtAddr` 分别是物理地址和虚拟地址，它们都可以类型转换为 `usize` 或者自身对应的 **页码类型（ PageNum ）** ，也可以从 `usize` 或者自身对应的 **页码类型** 转化而来，并且有着相同的函数：
 
@@ -60,7 +60,7 @@
 
 - **indices(&self)**: 取出虚拟页号的三级页索引。
 
-## 模块 (frame)
+## 子模块 `frame`
 
 `TrackedFrame` 是对 `PhysPageNum` 的封装，实现了创建和回收 `PhysPageNum` 的自动化。
 
@@ -103,7 +103,7 @@ lazy_static! {
 
 模块中顶层函数 **init()** 就是对 `FRAME_ALLOCATOR::init()` 的包装， FRAME_ALLOCATOR 维护的物理地址从 `ekernel` 标记开始直到 `MEMORY_END` 。
 
-## 模块 (page)
+## 子模块 `page`
 
 RISC-V 64 的 `satp` 字段如下表所示：
 
@@ -211,7 +211,7 @@ pub struct PageTable {
 
 - **copy_from_space(token: usize, src: *const u8, dst: *mut u8, len: usize)**: 根据 token 将 `src` 所在的物理原缓冲区写入 `dst` 对应的虚拟缓冲区。
 
-## 模块 (mm)
+## 模块 `mm`
 
 `MapType` 是枚举类型，表示映射方式，其定义如下：
 
