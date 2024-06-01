@@ -22,8 +22,4 @@
 
 - [文件系统 API](implements/file_system_api.md)
 
-- [设备管理器](implements/device_manager.md)
-
-- [系统驱动](implements/driver.md)
-
 - [中断处理](implements/trap_hander.md)
