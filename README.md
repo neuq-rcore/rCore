@@ -1,6 +1,20 @@
-# neuqOS
+# neuqOS 技术文档
 
-A simple os kernel for riscv64 written in Rust
+![NEUQ](docs/assets/neuq.jpg)
+
+## 初赛情况简介
+
+本团队已通过初赛所有测试点（ 2023-05-28 ），严格遵守大赛章程，全程开源且本团队所有成员承诺不存在抄袭现象。
+
+![target_rank](./docs/assets/target_rank.png)
+
+## 所有文档
+
+请查看 [文档总目录](docs/content.md) 。
+
+---
+
+## 自动化测试
 
 [![CodeFactor](https://www.codefactor.io/repository/github/neuq-rcore/rcore/badge)](https://www.codefactor.io/repository/github/neuq-rcore/rcore)
 
@@ -10,47 +24,45 @@ A simple os kernel for riscv64 written in Rust
 
 [![OJ Simulation](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml)
 
+## 准备工作
 
-## Build Dependencies
-
-- `riscv64-elf-gcc`
-- `riscv64-elf-binutils`
-- `cargo-binutils`
-- `llvm-tools-preview`
-
-For command line instructions, refer to `.github/workflows/ci.yml`
-
-## Build
+### 构建
 
 ```shell
 # or simply run `make`
 make build
 ```
 
-## Run
+### 运行
 
 ```shell
 make run
 ```
 
-## Test
+### 测试
 
 #### 本地测试
-在仓库根目录执行
-```bash
+
+在仓库根目录执行：
+
+```shell
 make test
 ```
 
-这将模拟比赛的评测环境，首先执行`make all`，然后使用要求的 Qemu 启动参数挂载测试样例并运行内核进行测试。运行结束后，测试脚本`test/visualize_result.py`将会生成测试结果的可视化报告。
+这将模拟比赛的评测环境，首先执行 `make all` ，然后使用要求的 Qemu 启动参数挂载测试样例并运行内核进行测试。运行结束后，测试脚本 `test/visualize_result.py` 将会生成测试结果的可视化报告。
 
-下面是生成的可视化报告的一个例子：
+左图为生成的可视化报告的一个例子，右图为本项目的最终报告：
 
-![](./test/visual_report.png)
+| ![visual_report](docs/assets/visual_report.png) | ![final_score](docs/assets/final_score_report.jpg) |
+|-------------------------------------------------|----------------------------------------------------|
 
 对于每个测试，
-- Skiped 表示测试未进行，或者该测试样例未输出结果就被内核杀死
-- Failed 表示测试已经执行，且有输出，但是测试结果不符合预期
-- Passed 表示测试通过，输出结果符合预期
+
+- **Skiped** 表示测试未进行，或者该测试样例未输出结果就被内核杀死
+
+- **Failed** 表示测试已经执行，且有输出，但是测试结果不符合预期
+
+- **Passed** 表示测试通过，输出结果符合预期
 
 其中，`[x/y]` 表示单个测试的结果，`x` 为测试通过的测试点数量，`y` 为该测试的测试点总数。
 
@@ -58,27 +70,66 @@ make test
 
 #### 持续集成测试
 
-对于`submit`分支下的每次提交（将来会合并到`main`分支），都会有一个 GitHub Actions workflow 自动运行测试。测试过程基本符合上述本地测试的流程，但是会在测试结束后将测试结果，Qemu输出和测试脚本对输出的判断结果都上传到 GitHub Actions 的 artifacts 中，以便查看详细的测试结果。同时，可视化脚本也会运行，无需下载 artifacts 即可查看测试结果。
+对于submit分支下的每次提交（将来会合并到 `main` 分支），都会有一个 GitHub Actions workflow 自动运行测试。测试过程基本符合上述本地测试的流程，但是会在测试结束后将测试结果，Qemu输出和测试脚本对输出的判断结果都上传到 GitHub Actions 的 artifacts 中，以便查看详细的测试结果。同时，可视化脚本也会运行，无需下载 artifacts 即可查看测试结果。
 
-注意，由于当前本仓库的内核仍然处于开发阶段，大量测试样例不能通过，因此测试脚本不会将 GitHub Actions 标记为失败，而是会将测试结果上传到 artifacts 中，以便查看详细的测试结果。如需查看测试结果，请手动查看每个 commit 的 GitHub Actions 的运行结果。
+## 调试
 
-## Debug
+### 命令行界面
 
-### Command line
+#### 通过 GDB 启动 QEMU 模拟器
 
-#### Launch QEMU instance with GDB server
 ```shell
 make debug
 ```
 
-#### Connect to GDB server
+#### 连接至 GDB 服务
+
 ```shell
 make connect
 ```
 
-### VSCode
-Open the repository in VSCode and press <kbd>F5</kbd> to start debugging.
+#### 生成运行日志
 
-## License
+``` shell
+make run LOG=<level>
+```
+
+### VSCode
+
+在 VSCode 中打开项目，按下 <kbd>F5</kbd> 进行调试。
+
+## 参赛队员
+
+徐才益
+
+薛丁豪
+
+白聪
+
+## 参考文档
+
+- [rCore-Tutorial-Book-v3 3.6.0-alpha.1 文档](https://rcore-os.cn/rCore-Tutorial-Book-v3/index.html)
+
+- [plctlab/riscv-operating-system-mooc: 《从头写一个RISC-V OS》课程配套的资源](https://github.com/plctlab/riscv-operating-system-mooc)
+
+- [xsp-daily-work/暑期rcore实验笔记 at master · xushanpu123/xsp-daily-work](https://github.com/xushanpu123/xsp-daily-work/tree/master/暑期rcore实验笔记)
+
+- [Introduction · GitBook](https://nju-projectn.github.io/ics-pa-gitbook/ics2024/)
+
+## 知识产权与学术诚信
+
+- 本团队仓库在初赛期间全过程保持开源状态
+
+- 本团队全程严守诚信，不存在抄袭谎报现象
+
+## 鸣谢
+
+郑重感谢 rCore-Tutorial-Book 教程带领本团队进入 RISC-V 标准的操作系统世界，本团队会在今后的 RISC-V 之路上越走越远，希望本团队能为 RISC-V 社区贡献自己的一份力量。
+
+## 许可
 
 MIT
+
+## 联系我们
+
+如若有问题欢迎与本团队联系，我们会在第一时间给您回复，邮箱 [cai1hsu@outlook.com](mailto:cai1hsu@outlook.com) ，欢迎您踊跃参与。
