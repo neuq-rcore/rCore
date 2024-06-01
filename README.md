@@ -98,14 +98,6 @@ make run LOG=<level>
 
 在 VSCode 中打开项目，按下 <kbd>F5</kbd> 进行调试。
 
-## [完成情况](docs/syscalls.md)
-
-| 内核模块 | 完成情况                                   | 系统调用 |
-| :------- | :----------------------------------------- | -------- |
-| 内存管理 | 虚拟内存                                   | mmap munmap open openat |
-| 文件系统 | FAT32,文件存储,文件存储,文件权限和访问控制     | chdir close dup2 fstat getcwd getdents mkdir mount unmount read unlink  write |
-| 进程 | 进程创建与销毁 进程管理 上下文同步 | fork clone execve getpid getppid sleep times wait waitpid |
-
 ## 参赛队员
 
 徐才益
