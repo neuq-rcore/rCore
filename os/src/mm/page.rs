@@ -32,7 +32,11 @@ impl PageTable {
     pub fn map(&mut self, vpn: VirtPageNum, ppn: PhysPageNum, flags: PageTableEntryFlags) {
         let entry = self.get_create_entry(vpn);
         assert!(!entry.is_valid()); // 一个虚拟页只能映射到一个物理页
-        *entry = PageTableEntry::new(ppn, flags | PageTableEntryFlags::V);
+        *entry = PageTableEntry::new(
+            ppn,
+            // VisionFive2 Requires Access and Modified flags to be set
+            flags | PageTableEntryFlags::V | PageTableEntryFlags::A | PageTableEntryFlags::D,
+        );
         assert!(entry.is_valid());
     }
 
