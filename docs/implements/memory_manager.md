@@ -22,7 +22,7 @@
 
   - `page`: 页表和页表项。
 
-## 模块 `heap`
+## 子模块 `heap`
 
 静态全局变量 `HEAP_ALLOCATOR` 是 `LockedHeap` 的实例，编译时会被链接至 `.bss.heap` 块，使用了 Attribute `#[global_allocator]` ，表示它作为 **全局内存分配器** 。
 
