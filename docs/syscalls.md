@@ -1,7 +1,7 @@
 # 系统调用实现情况
 
 Syscall | Implemented | Dummy implementation | Passed with tricks
---------|-------------|----------------------|-----------
+--------|:-----------:|:--------------------:|:-----------------:
 brk           |         | :wink: |                |
 chdir         | :blush: |        |                |
 clone         | :blush: |        |                |
