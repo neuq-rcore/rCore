@@ -18,3 +18,8 @@ visionfive2-sd = { git = "https://github.com/neuq-rcore/visionfive2-sd.git" }
 
 [profile.release]
 debug = true
+
+[features]
+default = ["board_vf2"]
+board_virt = []
+board_vf2 = []

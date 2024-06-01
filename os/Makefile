@@ -67,7 +67,7 @@ help:
 	@echo '- make debug   : Launch the os with qemu and wait for gdb'
 	@echo '- make connect : Launch gdb and connect to qemu'
 
-release: CARGO_FLAGS = --release
+release: CARGO_FLAGS += --release
 release: MODE = release
 release: KERNEL_ELF = target/$(TARGET)/$(MODE)/$(OUTPUT_NAME)
 release: KERNEL_BIN = $(KERNEL_ELF).bin
@@ -80,6 +80,9 @@ release-inner:
 	@echo '[+] Building os kernel(release)'
 	$(CARGO) build $(CARGO_FLAGS)
 	@$(OBJCOPY) --strip-all $(KERNEL_ELF) $(KERNEL_BIN)
+
+release-vf2: CARGO_FLAGS += --features board_vf2
+release-vf2: release
 
 clean:
 	@$(CARGO) clean

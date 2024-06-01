@@ -1,4 +1,4 @@
-.PHONY: clippy clippy-% all test test-inner parse dummy-run dummy-test
+.PHONY: clippy clippy-% all test test-inner parse dummy-run dummy-test vf2
 
 all:
 	@cd os && make -s release
@@ -44,6 +44,9 @@ clean:
 	rm -f output.log results.json sdcard.img
 	@echo -e "\e[1;33m=> Cleaning test result parse\e[0m"
 	rm -rf test/check_result/__pycache__
+
+vf2: 
+	@cd os && make -s release-vf2
 
 %:
 	@cd os && make -s $@
