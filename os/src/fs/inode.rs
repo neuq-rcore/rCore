@@ -32,7 +32,7 @@ pub enum FileType {
     Undetermined,
     Dir,
     File,
-    CharDevice, // unuse
+    CharDevice,
 }
 
 #[derive(Clone)]
