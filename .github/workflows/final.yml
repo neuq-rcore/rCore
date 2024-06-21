@@ -33,7 +33,7 @@ jobs:
         tar xvf sdcard.tar.gz
         ls -lh sdcard.img
 
-# Cache the .img instead of the .tar.gz because the GitHub Actions Caches restores at a very high speed, about 100 ~ 200 MB/s
+# Cache the .img instead of the .tar.gz because the GitHub Actions Cache restores at a very high speed, about 100 ~ 200 MB/s
     - name: Cache sdcard.img
       if: steps.cache.outputs.cache-hit != 'true'
       uses: actions/cache@v2
@@ -45,6 +45,5 @@ jobs:
       run: |
         # Your commands to run tests using the .img file
         echo "Running tests with the .img file"
-
-# See if we have the .img file
+        # See if we have the .img file
         ls -lh sdcard.img
