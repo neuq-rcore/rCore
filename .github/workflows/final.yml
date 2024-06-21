@@ -9,7 +9,7 @@ on:
       - '**'
 
 jobs:
-  build:
+  azure:
     runs-on: ubuntu-latest
 
     steps:
@@ -22,3 +22,20 @@ jobs:
 
     - name: List directory contents
       run: ls -la
+
+  gitlfs:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v2
+
+    - name: Download sdcard.img from GitHub 
+      run: |
+        git lfs install
+        git clone https://github.com/neuq-rcore/testsuit-binary.git && cd testsuit-binary
+        git lfs pull
+
+    - name: List directory contents
+      run: ls -la
+
