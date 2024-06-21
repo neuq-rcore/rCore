@@ -27,7 +27,7 @@ jobs:
     - name: Download .img file if not cached
       if: steps.cache.outputs.cache-hit != 'true'
       run: |
-        curl -L -o sdcard.img ${{ secrets.IMG_URL }}
+        curl -L -o sdcard.img "${{ secrets.IMG_URL }}"
 
     - name: Cache sdcard.img
       if: steps.cache.outputs.cache-hit != 'true'
