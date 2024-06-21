@@ -7,36 +7,36 @@ on:
   pull_request:
     branches:
       - '**'
-
 jobs:
-  azure:
+  test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Check out the repository
+    - name: Checkout code
       uses: actions/checkout@v2
 
-    - name: Download sdcard.img from Azure 
+    - name: Restore sdcard.img from cache
+      id: cache
+      uses: actions/cache@v2
+      with:
+        path: sdcard.img
+        key: ${{ runner.os }}-img-cache
+        restore-keys: |
+          ${{ runner.os }}-img-
+
+    - name: Download .img file if not cached
+      if: steps.cache.outputs.cache-hit != 'true'
       run: |
-        curl cip.cc
-        curl -L -o sdcard.img "${{ secrets.IMG_US_EAST }}"
+        curl -L -o sdcard.img ${{ secrets.IMG_URL }}
 
-    - name: List directory contents
-      run: ls -la
+    - name: Cache sdcard.img
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache@v2
+      with:
+        path: sdcard.img
+        key: ${{ runner.os }}-img-cache
 
-  gitlfs:
-    runs-on: ubuntu-latest
-
-    steps:
-    - name: Check out the repository
-      uses: actions/checkout@v2
-
-    - name: Download sdcard.img from GitHub 
+    - name: Run tests
       run: |
-        git lfs install
-        git clone https://github.com/neuq-rcore/testsuit-binary.git && cd testsuit-binary
-        git lfs pull
-
-    - name: List directory contents
-      run: ls -la
-
+        # Your commands to run tests using the .img file
+        echo "Running tests with the .img file"
