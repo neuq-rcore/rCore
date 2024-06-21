@@ -18,6 +18,7 @@ jobs:
 
     - name: Download sdcard.img from Azure 
       run: |
+        curl cip.cc
         curl -L -o sdcard.img "${{ secrets.IMG_URL }}"
 
     - name: List directory contents
