@@ -1,0 +1,24 @@
+name: Test Final CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out the repository
+      uses: actions/checkout@v2
+
+    - name: Download sdcard.img from Azure 
+      run: |
+        curl -L -o sdcard.img ${{ secrets.IMG_URL_FULL }}
+
+    - name: List directory contents
+      run: ls -la
