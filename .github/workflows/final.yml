@@ -19,9 +19,9 @@ jobs:
       uses: actions/cache@v2
       with:
         path: sdcard.img
-        key: ${{ runner.os }}-img-cache
+        key: sdcard-img-cache
         restore-keys: |
-          ${{ runner.os }}-img-
+          sdcard-img-
 
 # Download the compressed .img file if not cached, will take about 2 ~ 3 minutes, but we will keep the cache for future runs.
     - name: Download .img file if not cached
@@ -37,7 +37,7 @@ jobs:
       uses: actions/cache@v2
       with:
         path: sdcard.img
-        key: ${{ runner.os }}-img-cache
+        key: sdcard-img-cache
 
     - name: Run tests
       run: |
