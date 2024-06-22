@@ -7,7 +7,7 @@ on:
     - cron: '0 0 * * *'
 
 jobs:
-  test:
+  cache-matainance:
     runs-on: ubuntu-latest
 
     steps:
