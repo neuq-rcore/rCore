@@ -35,7 +35,7 @@ QEMU_ARGS := -machine virt \
 			 -nographic \
 			 -bios $(BOOTLOADER) \
 			 -device loader,file=$(KERNEL_ELF),addr=$(KERNEL_ENTRY_PA) \
-			 -drive file=../test/sdcard.img,if=none,format=raw,id=x0 \
+			 -drive file=../sdcard.img,if=none,format=raw,id=x0 \
         	 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 # End Region // Board
 
@@ -46,12 +46,15 @@ build:
 	$(CARGO) build $(CARGO_FLAGS)
 	@$(OBJCOPY) --strip-all $(KERNEL_ELF) $(KERNEL_BIN)
 
-run: build
+run: build prepare-sdcard
 	@$(QEMU) $(QEMU_ARGS)
 
-debug: build
+debug: build prepare-sdcard
 	@echo '[!] Waiting for debugger'
 	@$(QEMU) $(QEMU_ARGS) -s -S
+
+prepare-sdcard:
+	cp ../test/sdcard.img ../sdcard.img
 
 gdb: connect
 
