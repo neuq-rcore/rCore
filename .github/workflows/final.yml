@@ -1,0 +1,47 @@
+name: Test Final CI
+
+on:
+  push:
+    branches:
+      - '**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+# Fast path to restore the .img file from cache
+    - name: Restore sdcard.img from cache
+      id: cache
+      uses: actions/cache@v2
+      with:
+        path: sdcard.img
+        key: sdcard-img-cache
+        restore-keys: |
+          sdcard-img-
+
+# Download the compressed .img file if not cached, will take about 2 ~ 3 minutes, but we will keep the cache for future runs.
+    - name: Download .img file if not cached
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        curl -L -o sdcard.tar.gz "${{ secrets.IMG_COMPRESSED_URL }}"
+        tar xvf sdcard.tar.gz
+        ls -lh sdcard.img
+
+# Cache the .img instead of the .tar.gz because the GitHub Actions Cache restores at a very high speed, about 100 ~ 200 MB/s
+    - name: Cache sdcard.img
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache@v2
+      with:
+        path: sdcard.img
+        key: sdcard-img-cache
+
+    - name: Run tests
+      run: |
+        # Your commands to run tests using the .img file
+        echo "Running tests with the .img file"
+        # See if we have the .img file
+        ls -lh sdcard.img
