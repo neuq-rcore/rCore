@@ -22,6 +22,8 @@
 
 [![OJ Simulation](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml)
 
+[![Test Final](https://github.com/neuq-rcore/rCore/actions/workflows/final.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/final.yml)
+
 ## 准备工作
 
 ### 构建
