@@ -34,7 +34,7 @@ jobs:
 # GitHub will compress the files, so we just submit the original .img file. 
     - name: Cache sdcard.img
       if: steps.cache.outputs.cache-hit != 'true'
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: sdcard.img
         key: sdcard-img-cache
