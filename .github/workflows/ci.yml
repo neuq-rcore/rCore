@@ -31,7 +31,7 @@ jobs:
         run: |
           rustup toolchain install nightly-2024-02-03
           rustup override set nightly-2024-02-03
-          rustup target add riscv64gc-unknown-none-elf --toolchain nightly
+          rustup target add riscv64gc-unknown-none-elf --toolchain nightly-2024-02-03
           cargo install cargo-binutils
           rustup component add llvm-tools-preview
 
@@ -61,10 +61,10 @@ jobs:
         run: |
           rustup toolchain install nightly-2024-02-03
           rustup override set nightly-2024-02-03
-          rustup target add riscv64gc-unknown-none-elf --toolchain nightly
+          rustup target add riscv64gc-unknown-none-elf --toolchain nightly-2024-02-03
 
       - name: Install clippy
-        run: rustup component add clippy --toolchain nightly
+        run: rustup component add clippy --toolchain nightly-2024-02-03
 
       - name: Cargo Clippy
         run: make clippy
@@ -79,10 +79,10 @@ jobs:
         run: |
           rustup toolchain install nightly-2024-02-03
           rustup override set nightly-2024-02-03
-          rustup target add riscv64gc-unknown-none-elf --toolchain nightly
+          rustup target add riscv64gc-unknown-none-elf --toolchain nightly-2024-02-03
 
       - name: Install rustfmt
-        run: rustup component add rustfmt --toolchain nightly
+        run: rustup component add rustfmt --toolchain nightly-2024-02-03
 
       - name: Format check
         run: cd os && cargo fmt --check
