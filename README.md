@@ -16,8 +16,6 @@
 
 ## 自动化测试
 
-[![CodeFactor](https://www.codefactor.io/repository/github/neuq-rcore/rcore/badge)](https://www.codefactor.io/repository/github/neuq-rcore/rcore)
-
 [![Continuous Integration](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml)
 
 [![Sync to GitLab](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml)
