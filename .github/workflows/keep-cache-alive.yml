@@ -41,3 +41,29 @@ jobs:
 
     - name: Assert that we have the sdcard.img
       run: ls -lh sdcard.img
+
+    - name: Assert that the file is in good shape
+      run: |
+        # Check that the file is not corrupted
+        file sdcard.img
+        # Mount the file to check that it is a valid image
+        mkdir mnt
+        sudo mount -o loop sdcard.img mnt
+        ls -lh mnt
+        sudo umount mnt
+
+# Pull from Azure if the cache was corrupted.
+    - name: Download .img file if corrupted
+      if: steps.check-file.outcome == 'failure'
+      run: |
+        curl -L -o sdcard.tar.gz "${{ secrets.IMG_COMPRESSED_URL }}"
+        tar xvf sdcard.tar.gz
+        ls -lh sdcard.img
+
+# Cache the new file if the cache was corrupted.
+    - name: Cache sdcard.img if corrupted
+      if: steps.check-file.outcome == 'failure'
+      uses: actions/cache@v4
+      with:
+        path: sdcard.img
+        key: sdcard-img-cache
