@@ -41,7 +41,6 @@ jobs:
 
     - name: Run tests
       run: |
-        # Your commands to run tests using the .img file
-        echo "Running tests with the .img file"
         # See if we have the .img file
         ls -lh sdcard.img
+        # TODO: add the test command here
