@@ -1,0 +1,43 @@
+name: Keep cache alive
+
+on:
+# GitHub will remove any cache entries that have not been accessed in over 7 days 
+# We access the cache every 24 hours to prevent deletion
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  cache-matainance:
+    runs-on: ubuntu-latest
+
+    steps:
+
+# Try access the cache to keep it alive. 
+    - name: Try restore sdcard.img from cache
+      id: cache
+      uses: actions/cache@v2
+      with:
+        path: sdcard.img
+        key: sdcard-img-cache
+        restore-keys: |
+          sdcard-img-
+
+# Try to cache sdcard.img if the cache was missing. This should not happen, but will ensure that other CIs work fast.
+    - name: Download .img file if not cached
+      if: steps.cache.outputs.cache-hit != 'true'
+      run: |
+        curl -L -o sdcard.tar.gz "${{ secrets.IMG_COMPRESSED_URL }}"
+        tar xvf sdcard.tar.gz
+        ls -lh sdcard.img
+
+# GitHub will compress the files, so we just submit the original .img file. 
+    - name: Cache sdcard.img
+      if: steps.cache.outputs.cache-hit != 'true'
+      uses: actions/cache@v2
+      with:
+        path: sdcard.img
+        key: sdcard-img-cache
+
+    - name: Assert that we have the sdcard.img
+      run: ls -lh sdcard.img

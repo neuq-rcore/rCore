@@ -25,9 +25,9 @@ jobs:
 
       - name: Setup toolchains
         run: |
-          rustup toolchain install nightly
-          rustup target add riscv64gc-unknown-none-elf --toolchain nightly
-          rustup override set nightly
+          rustup toolchain install nightly-2024-02-03
+          rustup override set nightly-2024-02-03
+          rustup target add riscv64gc-unknown-none-elf --toolchain nightly-2024-02-03
           cargo install cargo-binutils
           rustup component add llvm-tools-preview
 

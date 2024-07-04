@@ -30,7 +30,7 @@ impl Processor {
     }
 
     pub fn current(&self) -> Option<Arc<TaskControlBlock>> {
-        self.current.as_ref().map(Arc::clone)
+        self.current.clone()
     }
 }
 

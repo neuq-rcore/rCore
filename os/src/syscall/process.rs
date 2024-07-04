@@ -152,7 +152,7 @@ pub fn sys_exec(pathname: *const u8, _argv: *const *const u8, _envp: *const *con
     let token = current_user_token();
     let cwd = task.shared_inner().cwd.clone();
     let pathname = PageTable::translate_string(token, pathname, 1024);
-    let pathname = match pathname.starts_with("/") {
+    let pathname = match pathname.starts_with('/') {
         true => pathname,
         false => match cwd.ends_with('/') {
             true => format!("{}{}", cwd, pathname),
