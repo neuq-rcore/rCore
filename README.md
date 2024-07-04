@@ -24,6 +24,8 @@
 
 [![Test Final](https://github.com/neuq-rcore/rCore/actions/workflows/final.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/final.yml)
 
+[![Cache matainance](https://github.com/neuq-rcore/rCore/actions/workflows/keep-cache-alive.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/keep-cache-alive.yml)
+
 ## 准备工作
 
 ### 构建
