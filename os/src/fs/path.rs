@@ -21,7 +21,7 @@ pub const DOT: char = '.';
 
 // Combine two paths
 pub fn combine(path1: &str, path2: &str) -> Option<String> {
-    return combine_internal(path1, path2);
+    combine_internal(path1, path2)
 }
 
 pub fn is_separator(c: char) -> bool {
@@ -146,7 +146,7 @@ fn get_full_path_internal(path: &str, cwd: &str) -> Option<String> {
                 0 => Some(ROOT_STR.to_string()),
                 _ => Some(collapsed),
             }
-        },
+        }
         false => combine(cwd, path),
     }
 }
@@ -206,9 +206,8 @@ fn remove_relative_segments_internal(path: &str) -> Option<String> {
                 && next == DOT
                 && next_next == DOT
             {
-                let mut s = sb.chars().rev();
                 let mut si = sb.len();
-                while let Some(c) = s.next() {
+                for c in sb.chars().rev() {
                     si -= 1;
 
                     if si <= skip {
@@ -308,7 +307,7 @@ fn get_directory_name_offset(path: &str) -> isize {
             let mut it = path.chars().rev();
             let mut end = len;
 
-            while let Some(c) = it.next() {
+            for c in it.by_ref() {
                 if end > root_len && !is_separator(c) {
                     end -= 1;
                 }
@@ -316,7 +315,7 @@ fn get_directory_name_offset(path: &str) -> isize {
 
             // Handle alternate directory separator('//' or '\\')
             it.next();
-            while let Some(c) = it.next() {
+            for c in it.by_ref() {
                 if end > root_len && is_separator(c) {
                     end -= 1;
                 }
@@ -330,7 +329,7 @@ fn get_directory_name_offset(path: &str) -> isize {
 fn index_of_filename(path: &str) -> usize {
     match path.is_empty() {
         true => 0,
-        false => match path.chars().rev().position(|c| is_separator(c)) {
+        false => match path.chars().rev().position(is_separator) {
             Some(pos) => path.len() - pos,
             None => 0,
         },
@@ -364,14 +363,14 @@ fn combine_internal(first: &str, second: &str) -> Option<String> {
 }
 
 fn join_internal(first: &str, second: &str) -> Option<String> {
-    assert!(first.len() > 0);
-    assert!(second.len() > 0);
+    assert!(!first.is_empty());
+    assert!(!second.is_empty());
 
     let has_separator =
         is_separator(first.chars().last().unwrap()) || is_separator(second.chars().next().unwrap());
 
-    return match has_separator {
+    match has_separator {
         true => Some(format!("{}{}", first, second)),
         false => Some(format!("{}{}{}", first, SEPARATOR, second)),
-    };
+    }
 }

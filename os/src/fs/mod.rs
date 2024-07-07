@@ -13,8 +13,8 @@ pub type FatfsDir<'a> = Dir<'a, Fat32IO, NullTimeProvider, LossyOemCpConverter>;
 pub type FatfsFile<'a> = File<'a, Fat32IO, NullTimeProvider, LossyOemCpConverter>;
 pub type FatfsEntry<'a> = fatfs::DirEntry<'a, Fat32IO, NullTimeProvider, LossyOemCpConverter>;
 
-pub mod path;
 pub mod inode;
+pub mod path;
 
 lazy_static! {
     pub static ref ROOT_FS: Arc<RootFs> = Arc::new(RootFs::new(0));
