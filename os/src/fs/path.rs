@@ -114,7 +114,7 @@ pub fn get_directory_name(path: &str) -> Option<String> {
         false => {
             let end = get_directory_name_offset(path) as usize;
 
-            nornamlize_path(&path[..end])
+            normalize_path(&path[..end])
         }
     }
 }
@@ -255,7 +255,7 @@ fn remove_relative_segments_internal(path: &str) -> Option<String> {
 }
 
 // Remove alternate directory separator('//' or '\\')
-pub fn nornamlize_path(path: &str) -> Option<String> {
+pub fn normalize_path(path: &str) -> Option<String> {
     if path.is_empty() {
         return None;
     }
