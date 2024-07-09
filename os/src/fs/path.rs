@@ -46,7 +46,7 @@ pub fn trim_end_separator(path: &str) -> &str {
     }
 }
 
-pub fn is_root(path: &str) -> bool {
+fn is_root(path: &str) -> bool {
     path.len() == get_root_length(path)
 }
 
@@ -141,7 +141,7 @@ pub fn get_relative_path(relative_to: &str, path: &str) -> Option<String> {
 
 pub fn get_full_path(path: &str, cwd: Option<&str>) -> Option<String> {
     match path.is_empty() {
-        true => None,
+        true => cwd.map(|c| c.to_string()),
         false => get_full_path_internal(path, cwd),
     }
 }
@@ -164,7 +164,7 @@ fn get_full_path_internal(path: &str, cwd: Option<&str>) -> Option<String> {
             }
         }
         false => match cwd {
-            None => None,
+            None => Some(path.to_string()),
             Some(cwd) => combine(cwd, path),
         },
     }
@@ -229,7 +229,7 @@ fn remove_relative_segments_internal(path: &str) -> Option<String> {
                 for c in sb.chars().rev() {
                     si -= 1;
 
-                    if si <= skip {
+                    if si < skip {
                         break;
                     }
 
@@ -409,24 +409,33 @@ mod tests {
         assert_eq!(combine("", "docs"), Some("docs".to_string()));
         assert_eq!(combine("/home/user", ""), Some("/home/user".to_string()));
         assert_eq!(combine("", ""), Some("".to_string()));
+        assert_eq!(combine("/", "docs"), Some("/docs".to_string()));
+        assert_eq!(combine("/home/user", "/docs"), Some("/docs".to_string()));
+        assert_eq!(combine("/home/user/", "/docs"), Some("/docs".to_string()));
     }
 
     #[test]
     fn test_ends_in_separator() {
         assert!(ends_in_separator("/home/user/"));
         assert!(!ends_in_separator("/home/user"));
+        assert!(ends_in_separator("/"));
+        assert!(!ends_in_separator(""));
     }
 
     #[test]
     fn test_starts_with_separator() {
         assert!(starts_with_separator("/home/user"));
         assert!(!starts_with_separator("home/user"));
+        assert!(starts_with_separator("/"));
+        assert!(!starts_with_separator(""));
     }
 
     #[test]
     fn test_trim_end_separator() {
         assert_eq!(trim_end_separator("/home/user/"), "/home/user");
         assert_eq!(trim_end_separator("/home/user"), "/home/user");
+        assert_eq!(trim_end_separator("/"), "/");
+        assert_eq!(trim_end_separator(""), "");
     }
 
     #[test]
@@ -439,24 +448,32 @@ mod tests {
     fn test_is_path_fully_qualified() {
         assert!(is_path_fully_qualified("/home/user"));
         assert!(!is_path_fully_qualified("home/user"));
+        assert!(is_path_fully_qualified("/"));
+        assert!(!is_path_fully_qualified(""));
     }
 
     #[test]
     fn test_has_extension() {
         assert!(has_extension("/home/user/file.txt"));
         assert!(!has_extension("/home/user/file"));
+        assert!(!has_extension("/home/user/"));
+        assert!(!has_extension(""));
     }
 
     #[test]
     fn test_get_extension() {
         assert_eq!(get_extension("/home/user/file.txt"), Some("txt"));
         assert_eq!(get_extension("/home/user/file"), None);
+        assert_eq!(get_extension("/home/user/"), None);
+        assert_eq!(get_extension(""), None);
     }
 
     #[test]
     fn test_get_filename() {
         assert_eq!(get_filename("/home/user/file.txt"), "file.txt");
         assert_eq!(get_filename("/home/user/"), "");
+        assert_eq!(get_filename("/"), "");
+        assert_eq!(get_filename(""), "");
     }
 
     #[test]
@@ -466,6 +483,8 @@ mod tests {
             "file"
         );
         assert_eq!(get_filename_without_extension("/home/user/file"), "file");
+        assert_eq!(get_filename_without_extension("/home/user/"), "");
+        assert_eq!(get_filename_without_extension(""), "");
     }
 
     #[test]
@@ -478,12 +497,22 @@ mod tests {
             change_extension("/home/user/file", "md"),
             Some("/home/user/file.md".to_string())
         );
+        assert_eq!(
+            change_extension("/home/user/file.txt", ""),
+            Some("/home/user/file".to_string())
+        );
+        assert_eq!(
+            change_extension("/home/user/file.txt", "tar.gz"),
+            Some("/home/user/file.tar.gz".to_string())
+        );
     }
 
     #[test]
     fn test_get_path_root() {
         assert_eq!(get_path_root("/home/user"), Some("/"));
         assert_eq!(get_path_root("home/user"), None);
+        assert_eq!(get_path_root("/"), Some("/"));
+        assert_eq!(get_path_root(""), None);
     }
 
     #[test]
@@ -493,6 +522,8 @@ mod tests {
             Some("/home/user")
         );
         assert_eq!(get_directory_name("/file.txt"), Some("/"));
+        assert_eq!(get_directory_name("/"), None);
+        assert_eq!(get_directory_name(""), None);
     }
 
     #[test]
@@ -502,6 +533,11 @@ mod tests {
         //     Some("docs/file.txt".to_string())
         // );
         // assert_eq!(get_relative_path("/home/user", "/docs/file.txt"), None);
+        // assert_eq!(
+        //     get_relative_path("/", "/home/user/docs/file.txt"),
+        //     Some("home/user/docs/file.txt".to_string())
+        // );
+        // assert_eq!(get_relative_path("/", "/"), Some("".to_string()));
     }
 
     #[test]
@@ -514,6 +550,14 @@ mod tests {
             get_full_path("/docs/file.txt", Some("/home/user")),
             Some("/docs/file.txt".to_string())
         );
+        assert_eq!(
+            get_full_path("file.txt", None),
+            Some("file.txt".to_string())
+        );
+        assert_eq!(
+            get_full_path("", Some("/home/user")),
+            Some("/home/user".to_string())
+        );
     }
 
     #[test]
@@ -523,5 +567,7 @@ mod tests {
             remove_relative_segments("/home/./user/docs"),
             "/home/user/docs"
         );
+        assert_eq!(remove_relative_segments("/../home/user"), "/home/user");
+        assert_eq!(remove_relative_segments("/home/user/../../docs"), "/docs");
     }
 }
