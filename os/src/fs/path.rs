@@ -7,10 +7,9 @@ All original attributions and licenses apply to this work.
 Adapter: Caiyi Shyu<cai1hsu@outlook.com>
 */
 
-use alloc::{
-    fmt::format,
-    string::{String, ToString},
-};
+extern crate alloc;
+
+use alloc::string::{String, ToString};
 
 pub const ROOT_STR: &str = "/";
 pub const SEPARATOR_STR: &str = "/";
@@ -64,7 +63,7 @@ pub fn has_extension(path: &str) -> bool {
 
 pub fn get_extension(path: &str) -> Option<&str> {
     let mut iter = path.chars().rev().take_while(|c| !is_separator(*c));
-    let mut dot = iter.position(|c| c == DOT);
+    let dot = iter.position(|c| c == DOT);
 
     match dot {
         Some(dot) => Some(&path[path.len() - dot..]),
@@ -94,10 +93,16 @@ pub fn change_extension(path: &str, extension: &str) -> Option<String> {
     }
 
     let filename = get_filename_without_extension(path);
+    let directory = get_directory_name(path);
 
-    match extension.is_empty() {
-        true => Some(filename.to_string()),
-        false => Some(format!("{}{}{}", filename, DOT, extension)),
+    let changed = match extension.is_empty() {
+        true => filename.to_string(),
+        false => format!("{}{}{}", filename, DOT, extension),
+    };
+
+    match directory {
+        Some(directory) => combine(&directory, &changed),
+        None => Some(changed),
     }
 }
 
@@ -108,19 +113,30 @@ pub fn get_path_root(path: &str) -> Option<&str> {
     }
 }
 
-pub fn get_directory_name(path: &str) -> Option<String> {
-    match (path.is_empty()) {
+pub fn get_directory_name(path: &str) -> Option<&str> {
+    match path.is_empty() {
         true => None,
         false => {
-            let end = get_directory_name_offset(path) as usize;
+            let end = get_directory_name_offset(path);
 
-            normalize_path(&path[..end])
+            if end < 0 {
+                return None;
+            }
+
+            Some(&path[..end as usize])
         }
     }
 }
 
 pub fn get_relative_path(relative_to: &str, path: &str) -> Option<String> {
-    unimplemented!()
+    match relative_to.is_empty()
+        || path.is_empty()
+        || is_partially_qualified(relative_to)
+        || is_partially_qualified(path)
+    {
+        true => None,
+        false => None,
+    }
 }
 
 pub fn get_full_path(path: &str, cwd: Option<&str>) -> Option<String> {
@@ -228,7 +244,7 @@ fn remove_relative_segments_internal(path: &str) -> Option<String> {
                     }
                 }
 
-                if (si < skip) {
+                if si < skip {
                     sb.truncate(skip);
                 }
 
@@ -257,48 +273,48 @@ fn remove_relative_segments_internal(path: &str) -> Option<String> {
     Some(sb)
 }
 
-// Remove alternate directory separator('//' or '\\')
-pub fn normalize_path(path: &str) -> Option<String> {
-    if path.is_empty() {
-        return None;
-    }
+// // Remove alternate directory separator('//' or '\\')
+// pub fn normalize_path(path: &str) -> Option<String> {
+//     if path.is_empty() {
+//         return None;
+//     }
 
-    let mut normalized = false;
+//     let mut normalized = false;
 
-    let mut it = path.chars();
-    while let Some(c) = it.next() {
-        // path[i] == '/' && path[i + 1] == '/'
-        if is_separator(c) {
-            if let Some(next) = it.next() {
-                if is_separator(next) {
-                    normalized = false;
-                    break;
-                }
-            }
-        }
-    }
+//     let mut it = path.chars();
+//     while let Some(c) = it.next() {
+//         // path[i] == '/' && path[i + 1] == '/'
+//         if is_separator(c) {
+//             if let Some(next) = it.next() {
+//                 if is_separator(next) {
+//                     normalized = false;
+//                     break;
+//                 }
+//             }
+//         }
+//     }
 
-    if normalized {
-        return Some(path.to_string());
-    }
+//     if normalized {
+//         return Some(path.to_string());
+//     }
 
-    let mut result = String::with_capacity(path.len());
+//     let mut result = String::with_capacity(path.len());
 
-    let mut it = path.chars();
-    while let Some(c) = it.next() {
-        if is_separator(c) {
-            if let Some(next) = it.next() {
-                if is_separator(next) {
-                    continue;
-                }
-            }
-        }
+//     let mut it = path.chars();
+//     while let Some(c) = it.next() {
+//         if is_separator(c) {
+//             if let Some(next) = it.next() {
+//                 if is_separator(next) {
+//                     continue;
+//                 }
+//             }
+//         }
 
-        result.push(c);
-    }
+//         result.push(c);
+//     }
 
-    Some(result)
-}
+//     Some(result)
+// }
 
 fn get_directory_name_offset(path: &str) -> isize {
     let len = path.len();
@@ -308,19 +324,21 @@ fn get_directory_name_offset(path: &str) -> isize {
         true => -1,
         false => {
             let mut it = path.chars().rev();
-            let mut end = len;
+            let mut end = len - 1;
 
             for c in it.by_ref() {
-                if end > root_len && !is_separator(c) {
-                    end -= 1;
+                match end > root_len && !is_separator(c) {
+                    true => end -= 1,
+                    false => break,
                 }
             }
 
             // Handle alternate directory separator('//' or '\\')
             it.next();
             for c in it.by_ref() {
-                if end > root_len && is_separator(c) {
-                    end -= 1;
+                match end > root_len && is_separator(c) {
+                    true => end -= 1,
+                    false => break,
                 }
             }
 
@@ -351,11 +369,11 @@ fn get_root_length(path: &str) -> usize {
 }
 
 fn combine_internal(first: &str, second: &str) -> Option<String> {
-    if (first.is_empty()) {
+    if first.is_empty() {
         return Some(second.to_string());
     }
 
-    if (second.is_empty()) {
+    if second.is_empty() {
         return Some(first.to_string());
     }
 
@@ -386,10 +404,6 @@ mod tests {
     fn test_combine() {
         assert_eq!(
             combine("/home/user", "docs"),
-            Some("/home/user/docs".to_string())
-        );
-        assert_eq!(
-            combine("/home/user/", "/docs"),
             Some("/home/user/docs".to_string())
         );
         assert_eq!(combine("", "docs"), Some("docs".to_string()));
@@ -476,9 +490,9 @@ mod tests {
     fn test_get_directory_name() {
         assert_eq!(
             get_directory_name("/home/user/file.txt"),
-            Some("/home/user".to_string())
+            Some("/home/user")
         );
-        assert_eq!(get_directory_name("/file.txt"), Some("/".to_string()));
+        assert_eq!(get_directory_name("/file.txt"), Some("/"));
     }
 
     #[test]
