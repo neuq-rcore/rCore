@@ -1,0 +1,24 @@
+name: Unit tests 
+
+on: [push]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup toolchains
+        run: |
+          rustup toolchain install nightly-2024-02-03
+          rustup override set nightly-2024-02-03
+
+      - name: Build
+        run: make unit-test

@@ -1,4 +1,4 @@
-.PHONY: clippy clippy-% all test test-inner parse dummy-run dummy-test vf2
+.PHONY: clippy clippy-% all test test-inner parse dummy-run dummy-test vf2 lib-test unit-test
 
 all:
 	@cd os && make -s release
@@ -24,6 +24,11 @@ test-inner:
         -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0 \
         -device virtio-net-device,netdev=net \
         -netdev user,id=net | tee output.log
+
+lib-test: unit-test
+
+unit-test:
+	@cd unit-test && cargo test
 
 parse:
 # the test scripts produce 'SyntaxWarning: invalid escape sequence'
