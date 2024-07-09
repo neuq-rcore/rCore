@@ -408,7 +408,7 @@ fn get_relative_path_internal(relative_to: &str, path: &str) -> Option<String> {
                 sb.push_str("..");
             }
         }
-    } else if is_separator(path.chars().skip(common_len).next().unwrap()) {
+    } else if is_separator(path.chars().nth(common_len).unwrap()) {
         // No parent segments and we need to eat the initial separator
         //  (C:\Foo C:\Foo\Bar case)
         common_len += 1;
@@ -421,7 +421,7 @@ fn get_relative_path_internal(relative_to: &str, path: &str) -> Option<String> {
     }
 
     if diff_len > 0 {
-        if sb.len() > 0 {
+        if !sb.is_empty() {
             sb.push(SEPARATOR);
         }
 
@@ -473,7 +473,7 @@ fn get_common_length(first: &str, second: &str) -> usize {
         }
     }
 
-    return common_chars;
+    common_chars
 }
 
 fn equal_starting_character_count(first: &str, second: &str) -> usize {
