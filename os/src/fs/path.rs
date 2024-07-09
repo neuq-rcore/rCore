@@ -123,8 +123,8 @@ pub fn get_relative_path(relative_to: &str, path: &str) -> Option<String> {
     unimplemented!()
 }
 
-pub fn get_full_path(path: &str, cwd: &str) -> Option<String> {
-    match path.is_empty() || cwd.is_empty() {
+pub fn get_full_path(path: &str, cwd: Option<&str>) -> Option<String> {
+    match path.is_empty() {
         true => None,
         false => get_full_path_internal(path, cwd),
     }
@@ -137,7 +137,7 @@ pub fn remove_relative_segments(path: &str) -> String {
     }
 }
 
-fn get_full_path_internal(path: &str, cwd: &str) -> Option<String> {
+fn get_full_path_internal(path: &str, cwd: Option<&str>) -> Option<String> {
     match is_path_rooted(path) {
         true => {
             let collapsed = remove_relative_segments(path);
@@ -147,7 +147,10 @@ fn get_full_path_internal(path: &str, cwd: &str) -> Option<String> {
                 _ => Some(collapsed),
             }
         }
-        false => combine(cwd, path),
+        false => match cwd {
+            None => None,
+            Some(cwd) => combine(cwd, path),
+        },
     }
 }
 
@@ -490,11 +493,11 @@ mod tests {
     #[test]
     fn test_get_full_path() {
         assert_eq!(
-            get_full_path("file.txt", "/home/user"),
+            get_full_path("file.txt", Some("/home/user")),
             Some("/home/user/file.txt".to_string())
         );
         assert_eq!(
-            get_full_path("/docs/file.txt", "/home/user"),
+            get_full_path("/docs/file.txt", Some("/home/user")),
             Some("/docs/file.txt".to_string())
         );
     }
