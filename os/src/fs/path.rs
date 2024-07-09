@@ -101,7 +101,7 @@ pub fn change_extension(path: &str, extension: &str) -> Option<String> {
     };
 
     match directory {
-        Some(directory) => combine(&directory, &changed),
+        Some(directory) => combine(directory, &changed),
         None => Some(changed),
     }
 }
