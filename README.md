@@ -16,15 +16,14 @@
 
 ## 自动化测试
 
-[![Continuous Integration](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml)
-
-[![Sync to GitLab](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml)
-
-[![OJ Simulation](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml)
-
-[![Test Final](https://github.com/neuq-rcore/rCore/actions/workflows/final.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/final.yml)
-
-[![Cache matainance](https://github.com/neuq-rcore/rCore/actions/workflows/keep-cache-alive.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/keep-cache-alive.yml)
+| Category            | Badge                                                                                                                                      |
+|---------------------|--------------------------------------------------------------------------------------------------------------------------------------------|
+| Code reliability    | [![Continuous Integration](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/ci.yml)                   |
+| Preliminary test    | [![OJ Simulation](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/oj.yml)                           |
+| Final test          | [![Test Final](https://github.com/neuq-rcore/rCore/actions/workflows/final.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/final.yml)                       |
+| Host-level test     | [![Unit tests](https://github.com/neuq-rcore/rCore/actions/workflows/lib-test.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/lib-test.yml)                 |
+| Auto mirror         | [![Sync to GitLab](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/mirror.yml)                 |
+| Cache maintenance   | [![Cache maintenance](https://github.com/neuq-rcore/rCore/actions/workflows/keep-cache-alive.yml/badge.svg)](https://github.com/neuq-rcore/rCore/actions/workflows/keep-cache-alive.yml)   |
 
 ## 准备工作
 
