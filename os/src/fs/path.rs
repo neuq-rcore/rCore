@@ -9,6 +9,8 @@ Adapter: Caiyi Shyu<cai1hsu@outlook.com>
 
 extern crate alloc;
 
+use core::cmp::max;
+
 use alloc::string::{String, ToString};
 
 pub const ROOT_STR: &str = "/";
@@ -135,7 +137,7 @@ pub fn get_relative_path(relative_to: &str, path: &str) -> Option<String> {
         || is_partially_qualified(path)
     {
         true => None,
-        false => None,
+        false => get_relative_path_internal(relative_to, path),
     }
 }
 
@@ -368,6 +370,132 @@ fn get_root_length(path: &str) -> usize {
     }
 }
 
+fn get_relative_path_internal(relative_to: &str, path: &str) -> Option<String> {
+    let mut common_len = get_common_length(relative_to, path);
+
+    if common_len == 0 {
+        return Some(path.to_string());
+    }
+
+    // Trailing separators aren't significant for comparison
+    let relative_to_len = effective_length(relative_to);
+    let path_len = effective_length(path);
+
+    // If we have effectively the same path, return "."
+    if relative_to_len == path_len && common_len >= relative_to_len {
+        return Some(DOT_STR.to_string());
+    }
+
+    // We have the same root, we need to calculate the difference now using the
+    // common Length and Segment count past the length.
+    //
+    // Some examples:
+    //
+    //  C:\Foo C:\Bar L3, S1 -> ..\Bar
+    //  C:\Foo C:\Foo\Bar L6, S0 -> Bar
+    //  C:\Foo\Bar C:\Bar\Bar L3, S2 -> ..\..\Bar\Bar
+    //  C:\Foo\Foo C:\Foo\Bar L7, S1 -> ..\Bar
+
+    let mut sb = String::with_capacity(max(relative_to.len(), path.len()));
+
+    // Add parent segments for segments past the common on the "from" path
+    if common_len < relative_to_len {
+        sb.push_str("..");
+
+        for c in relative_to.chars().skip(common_len + 1) {
+            if is_separator(c) {
+                sb.push(SEPARATOR);
+                sb.push_str("..");
+            }
+        }
+    } else if is_separator(path.chars().skip(common_len).next().unwrap()) {
+        // No parent segments and we need to eat the initial separator
+        //  (C:\Foo C:\Foo\Bar case)
+        common_len += 1;
+    }
+
+    // Now add the rest of the "to" path, adding back the trailing separator
+    let mut diff_len = path_len - common_len;
+    if ends_in_separator(path) {
+        diff_len += 1;
+    }
+
+    if diff_len > 0 {
+        if sb.len() > 0 {
+            sb.push(SEPARATOR);
+        }
+
+        sb.push_str(&path[common_len..common_len + diff_len]);
+    }
+
+    Some(sb)
+}
+
+fn effective_length(path: &str) -> usize {
+    let len = path.len();
+
+    match ends_in_separator(path) {
+        true => len - 1,
+        false => len,
+    }
+}
+
+fn get_common_length(first: &str, second: &str) -> usize {
+    let mut common_chars = equal_starting_character_count(first, second);
+
+    if common_chars == 0 {
+        return 0;
+    }
+
+    let first_len = first.len();
+    let second_len = second.len();
+
+    if common_chars == first_len && common_chars == second_len
+        || is_separator(second.chars().nth(common_chars).unwrap())
+    {
+        return common_chars;
+    }
+
+    if common_chars == second_len && is_separator(first.chars().nth(common_chars).unwrap()) {
+        return common_chars;
+    }
+
+    let mut it = first.chars().rev().skip(first_len - common_chars + 1);
+
+    while common_chars > 0 {
+        match it.next() {
+            None => break,
+            Some(c) => {
+                if is_separator(c) {
+                    common_chars -= 1;
+                }
+            }
+        }
+    }
+
+    return common_chars;
+}
+
+fn equal_starting_character_count(first: &str, second: &str) -> usize {
+    if first.is_empty() || second.is_empty() {
+        return 0;
+    }
+
+    let mut common_len = 0;
+    let mut first_it = first.chars();
+    let mut second_it = second.chars();
+
+    while let (Some(a_char), Some(b_char)) = (first_it.next(), second_it.next()) {
+        if a_char == b_char {
+            common_len += 1;
+        } else {
+            break;
+        }
+    }
+
+    common_len
+}
+
 fn combine_internal(first: &str, second: &str) -> Option<String> {
     if first.is_empty() {
         return Some(second.to_string());
@@ -528,16 +656,17 @@ mod tests {
 
     #[test]
     fn test_get_relative_path() {
-        // assert_eq!(
-        //     get_relative_path("/home/user", "/home/user/docs/file.txt"),
-        //     Some("docs/file.txt".to_string())
-        // );
+        assert_eq!(
+            get_relative_path("/home/user", "/home/user/docs/file.txt"),
+            Some("docs/file.txt".to_string())
+        );
+        assert_eq!(
+            get_relative_path("/", "/home/user/docs/file.txt"),
+            Some("home/user/docs/file.txt".to_string())
+        );
+        assert_eq!(get_relative_path("/", "/"), Some(".".to_string()));
+        // ../../ should result in empty result.
         // assert_eq!(get_relative_path("/home/user", "/docs/file.txt"), None);
-        // assert_eq!(
-        //     get_relative_path("/", "/home/user/docs/file.txt"),
-        //     Some("home/user/docs/file.txt".to_string())
-        // );
-        // assert_eq!(get_relative_path("/", "/"), Some("".to_string()));
     }
 
     #[test]
