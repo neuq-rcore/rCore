@@ -1,10 +1,10 @@
 /*
-This code is a derivative work based on .NET Standard Library source code
-(c) .NET Foundation, licensed under the MIT license.
+    This code is a derivative work based on .NET Standard Library source code
+    Licensed to the .NET Foundation under the MIT license.
 
-All original attributions and licenses apply to this work.
+    All original attributions and licenses apply to this work.
 
-Adapter: Caiyi Shyu<cai1hsu@outlook.com>
+    Adapter: Caiyi Shyu<cai1hsu@outlook.com>
 */
 
 extern crate alloc;
