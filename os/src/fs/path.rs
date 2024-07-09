@@ -1,6 +1,6 @@
 /*
 This code is a derivative work based on .NET Standard Library source code
-(c) Microsoft Corporation, licensed under the MIT license.
+(c) .NET Foundation, licensed under the MIT license.
 
 All original attributions and licenses apply to this work.
 
