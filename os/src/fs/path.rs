@@ -42,14 +42,14 @@ pub fn starts_with_separator(path: &str) -> bool {
 }
 
 pub fn trim_end_separator(path: &str) -> &str {
-    match ends_in_separator(path) && !is_root(path) {
+    match ends_in_separator(path) && !is_root_internal(path) {
         true => &path[..path.len() - 1],
         false => path,
     }
 }
 
-fn is_root(path: &str) -> bool {
-    path.len() == get_root_length(path)
+pub fn is_root(path: &str) -> bool {
+    !path.is_empty() && is_root_internal(path)
 }
 
 pub fn is_path_fully_qualified(path: &str) -> bool {
@@ -153,6 +153,17 @@ pub fn remove_relative_segments(path: &str) -> String {
         Some(p) => p,
         None => path.to_string(),
     }
+}
+
+pub fn relative_to_root(path: &str) -> &str {
+    match is_path_fully_qualified(path) {
+        false => path,
+        true => &path[get_root_length(path)..],
+    }
+}
+
+fn is_root_internal(path: &str) -> bool {
+    path.len() == get_root_length(path)
 }
 
 fn get_full_path_internal(path: &str, cwd: Option<&str>) -> Option<String> {
@@ -568,8 +579,8 @@ mod tests {
 
     #[test]
     fn test_is_root() {
-        assert!(is_root("/"));
-        assert!(!is_root("/home/user"));
+        assert!(is_root_internal("/"));
+        assert!(!is_root_internal("/home/user"));
     }
 
     #[test]
