@@ -14,8 +14,10 @@
 
 use core::{arch::asm, slice};
 
+use fatfs::warn;
 use log::{debug, info};
 use sbi::shutdown;
+use task::{kernel_create_process, kernel_create_process_with_args};
 
 use crate::fs::get_fs;
 
@@ -43,11 +45,21 @@ mod trap;
 
 #[no_mangle]
 fn main() {
+    if option_env!("TEST") == Some("preliminary") {
+        test_preliminary();
+    } else if option_env!("TEST") == Some("final") {
+        test_final();
+    } else {
+        warn!("No test specified. Running default test.");
+    }
+}
+
+fn test_preliminary() {
     let test_cases = vec![
         "execve",
         "mmap",
         "munmap",
-        "dup", // Don't know why this test is easily left out, so we put it in the first place
+        "dup",
         "brk",
         "chdir",
         "clone",
@@ -75,8 +87,7 @@ fn main() {
         "waitpid",
         "write",
         "yield",
-        "pipe", // Implemented with workaround
-                // To make the workaround work, we have to supress all possible interference
+        "pipe",
     ];
 
     for name in test_cases.into_iter() {
@@ -96,6 +107,15 @@ fn main() {
     }
 
     debug!("All tests finished. Shutting down.")
+}
+
+fn test_final() {
+    let busybox = get_fs().root_dir().read_file_as_buf("busybox");
+
+    match busybox {
+        Some(busybox) => kernel_create_process_with_args(&busybox, &["busybox", "sh", "./test_all.sh"]),
+        None => panic!("Busybox not found. Aborting."),
+    }
 }
 
 #[naked]
