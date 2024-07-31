@@ -118,7 +118,9 @@ fn test_final() {
     let busybox = get_fs().root_dir().read_file_as_buf("busybox");
 
     match busybox {
-        Some(busybox) => kernel_create_process_with_args(&busybox, &["busybox", "sh", "./test_all.sh"]),
+        Some(busybox) => {
+            kernel_create_process_with_args(&busybox, &["busybox", "sh", "./test_all.sh"])
+        }
         None => panic!("Busybox not found. Aborting."),
     }
 

@@ -134,7 +134,12 @@ impl TaskControlBlock {
 
         let mut pos = heap_pos;
 
-        PageTable::copy_to_space(satp, argc as * const usize as *const u8, heap_pos as *mut u8, 4);
+        PageTable::copy_to_space(
+            satp,
+            argc as *const usize as *const u8,
+            heap_pos as *mut u8,
+            4,
+        );
         arg_positions.push(pos);
 
         pos += 4;
@@ -153,7 +158,7 @@ impl TaskControlBlock {
 
         // handle argc and argv
         let argc = argv.len();
-        
+
         self.exclusive_inner().task_ctx.borrow_mut().sp = arg_positions.first().unwrap().clone();
     }
 
