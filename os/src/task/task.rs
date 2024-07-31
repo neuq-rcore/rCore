@@ -159,7 +159,7 @@ impl TaskControlBlock {
         // handle argc and argv
         let argc = argv.len();
 
-        self.exclusive_inner().task_ctx.borrow_mut().sp = arg_positions.first().unwrap().clone();
+        self.exclusive_inner().task_ctx.borrow_mut().sp = *arg_positions.first().unwrap();
     }
 
     fn align_to_page(size: usize) -> usize {
