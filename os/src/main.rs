@@ -14,8 +14,7 @@
 
 use core::{arch::asm, slice};
 
-use fatfs::warn;
-use log::{debug, info};
+use log::{debug, info, warn};
 use sbi::shutdown;
 use task::{kernel_create_process, kernel_create_process_with_args};
 
@@ -45,12 +44,11 @@ mod trap;
 
 #[no_mangle]
 fn main() {
-    if option_env!("TEST") == Some("preliminary") {
-        test_preliminary();
-    } else if option_env!("TEST") == Some("final") {
+    if option_env!("TEST") == Some("final") {
         test_final();
     } else {
         warn!("No test specified. Running default test.");
+        test_preliminary();
     }
 }
 
