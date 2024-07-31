@@ -9,7 +9,7 @@ all:
 clippy: clippy-os
 
 clippy-%:
-	cd $* && cargo clippy --all-features
+	cd $* && cargo clippy
 
 test: all test-inner parse
 
