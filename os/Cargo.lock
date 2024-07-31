@@ -132,7 +132,6 @@ dependencies = [
  "fatfs",
  "lazy_static",
  "log",
- "memchr",
  "riscv",
  "sbi-rt",
  "sbi-spec",

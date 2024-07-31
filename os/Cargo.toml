@@ -15,7 +15,6 @@ buddy_system_allocator = { git = "https://github.com/neuq-rcore/buddy_system_all
 bitflags = "2.5.0"
 xmas-elf = { git = "https://github.com/nrc/xmas-elf.git" }
 visionfive2-sd = { git = "https://github.com/neuq-rcore/visionfive2-sd.git" }
-memchr = "2.7.2"
 
 [profile.release]
 debug = true
