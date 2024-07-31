@@ -14,8 +14,7 @@
 
 use core::{arch::asm, slice};
 
-use fatfs::warn;
-use log::{debug, info};
+use log::{debug, info, warn};
 use sbi::shutdown;
 use task::{kernel_create_process, kernel_create_process_with_args};
 
@@ -47,10 +46,9 @@ mod trap;
 fn main() {
     if option_env!("TEST") == Some("preliminary") {
         test_preliminary();
-    } else if option_env!("TEST") == Some("final") {
-        test_final();
     } else {
         warn!("No test specified. Running default test.");
+        test_final();
     }
 }
 
@@ -110,6 +108,10 @@ fn test_preliminary() {
 }
 
 fn test_final() {
+    kernel_create_process(TIME_TEST_BINRAY);
+
+    task::run_tasks();
+
     let busybox = get_fs().root_dir().read_file_as_buf("busybox");
 
     match busybox {
@@ -190,3 +192,5 @@ unsafe fn clear_bss() {
 
     slice::from_mut_ptr_range(sbss as *mut u8..ebss as *mut u8).fill(0);
 }
+
+static TIME_TEST_BINRAY: &[u8] = include_bytes!("../../time-test");
