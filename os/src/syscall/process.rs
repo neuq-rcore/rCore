@@ -1,4 +1,3 @@
-use crate::boards::qemu::CLOCK_FREQ;
 use crate::fs::get_fs;
 use crate::mm::page::PageTable;
 use crate::task::TaskManager::add_to_waiting;

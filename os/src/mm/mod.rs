@@ -4,7 +4,6 @@ pub mod heap;
 pub mod page;
 
 use crate::{
-    boards::MMIO,
     config::{TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE},
     sync::UPSafeCell,
 };
@@ -17,7 +16,7 @@ use riscv::register::satp;
 use bitflags::bitflags;
 use lazy_static::lazy_static;
 
-use crate::config::{MEMORY_END, PAGE_SIZE};
+use crate::config::PAGE_SIZE;
 
 pub use self::{
     address::{PhysAddr, PhysPageNum, VirtAddr, VirtPageNum},

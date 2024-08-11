@@ -1,7 +1,6 @@
 use alloc::{collections::VecDeque, vec::Vec};
 use lazy_static::lazy_static;
 
-use crate::config::MEMORY_END;
 use crate::sync::UPSafeCell;
 
 use super::address::{PhysAddr, PhysPageNum};

@@ -2,13 +2,10 @@ use core::mem::forget;
 
 use virtio_drivers::Hal;
 
-use crate::{
-    config::MEMORY_END,
-    mm::{
+use crate::mm::{
         frame::{frame_alloc_contiguous, frame_dealloc_contiguous},
         PhysAddr, KERNEL_SPACE,
-    },
-};
+    };
 
 use core::ptr::NonNull;
 pub const VIRTIO0: usize = 0x1000_1000;
