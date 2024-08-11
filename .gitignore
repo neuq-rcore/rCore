@@ -20,7 +20,7 @@ test_mmap.txt
 
 os/src/link_app.S
 
-**/bin
-**/obj
-
+*/[Bb]in/
+*/[Oo]bj/
+*/[Ll]og/
 *.sln

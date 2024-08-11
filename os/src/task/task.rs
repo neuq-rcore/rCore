@@ -1,3 +1,4 @@
+use core::borrow::BorrowMut;
 use core::cell::Ref;
 use core::cell::RefMut;
 
@@ -10,6 +11,7 @@ use log::info;
 use crate::fs::inode::FileDescriptor;
 use crate::mm::address::VirtAddr;
 
+use crate::mm::page::PageTable;
 use crate::sync::UPSafeCell;
 use crate::task::pid::pid_alloc;
 use crate::{
@@ -115,6 +117,53 @@ impl TaskControlBlock {
 
     pub fn task_ctx(&self) -> &TaskContext {
         unsafe { &*(&self.shared_inner().task_ctx as *const TaskContext) }
+    }
+
+    pub fn init_args(&self, argv: &[&str]) {
+        let mut size: usize = argv.iter().map(|s| s.len() + 5).sum();
+        size = Self::align_to_page(size);
+
+        let heap_pos = self.exclusive_inner().base_size;
+
+        // Copy args to user space
+        let satp = self.token();
+
+        let argc = argv.len();
+
+        let mut arg_positions = Vec::new();
+
+        let mut pos = heap_pos;
+
+        PageTable::copy_to_space(
+            satp,
+            argc as *const usize as *const u8,
+            heap_pos as *mut u8,
+            4,
+        );
+        arg_positions.push(pos);
+
+        pos += 4;
+
+        for arg in argv.iter() {
+            arg_positions.push(pos);
+
+            let len = arg.len();
+
+            PageTable::copy_to_space(satp, arg.as_ptr(), pos as *mut u8, len);
+            pos += len + 1; // leave space for '\0'
+        }
+
+        // Save heap position
+        self.exclusive_inner().heap_pos = heap_pos;
+
+        // handle argc and argv
+        let argc = argv.len();
+
+        self.exclusive_inner().task_ctx.borrow_mut().sp = *arg_positions.first().unwrap();
+    }
+
+    fn align_to_page(size: usize) -> usize {
+        (size + 4095) & !4095
     }
 }
 

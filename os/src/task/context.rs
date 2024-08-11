@@ -3,9 +3,9 @@ use crate::trap::trap_return;
 #[derive(Copy, Clone)]
 #[repr(C)]
 pub struct TaskContext {
-    ra: usize,
-    sp: usize,
-    s: [usize; 12],
+    pub ra: usize,
+    pub sp: usize,
+    pub s: [usize; 12],
 }
 
 impl TaskContext {

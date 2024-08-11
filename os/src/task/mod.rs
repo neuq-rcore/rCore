@@ -28,6 +28,12 @@ pub fn kernel_create_process(elf_data: &[u8]) {
     add_task(pcb);
 }
 
+pub fn kernel_create_process_with_args(elf_data: &[u8], argv: &[&str]) {
+    let pcb = Arc::new(TaskControlBlock::new(elf_data, pid_alloc()));
+    pcb.init_args(argv);
+    add_task(pcb);
+}
+
 /// pid of usertests app in make run TEST=1
 pub const IDLE_PID: usize = 0;
 
