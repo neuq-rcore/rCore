@@ -163,9 +163,16 @@ fn debug_env() {
     use crate::sbi::console::UnionConsole;
     use sbi_spec::base::impl_id;
 
+    info!(r#"                          ___  ____  "#);
+    info!(r#"  _ __   ___ _   _  __ _ / _ \/ ___|"#);
+    info!(r#" | '_ \ / _ \ | | |/ _` | | | \___ \ "#);
+    info!(r#" | | | |  __/ |_| | (_| | |_| |___) |"#);
+    info!(r#" |_| |_|\___|\__/_|\__/ |\___/|____/ "#);
+    info!(r#"                      |_|            "#);
+
     info!("Hello, world!");
 
-    debug!("SBI specification version: {0}", sbi_rt::get_spec_version());
+    info!("SBI specification version: {0}", sbi_rt::get_spec_version());
 
     let sbi_impl = sbi_rt::get_sbi_impl_id();
     let sbi_impl = match sbi_impl {
@@ -179,14 +186,17 @@ fn debug_env() {
         _ => "Unknown",
     };
 
-    debug!("SBI implementation: {0}", sbi_impl);
+    info!("SBI implementation: {0}", sbi_impl);
 
     let console_type = match UnionConsole::instance() {
         UnionConsole::Legacy(_) => "Legacy",
         UnionConsole::Dbcn(_) => "DBCN",
     };
 
-    debug!("Console type: {0}", console_type);
+    info!("Console type: {0}", console_type);
+
+    // board initialization
+    // let _ = board();
 }
 
 unsafe fn clear_bss() {
