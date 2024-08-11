@@ -6,15 +6,17 @@ use core::panic::PanicInfo;
 
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
+    let msg = info.message();
+
     if let Some(location) = info.location() {
         error!(
             "Panicked at {}:{} {}",
             location.file(),
             location.line(),
-            info.message().unwrap()
+            msg
         );
     } else {
-        error!("Panicked: {}", info.message().unwrap());
+        error!("Panicked: {}", msg);
     }
     unsafe { print_stack_trace() }
     shutdown(true)
