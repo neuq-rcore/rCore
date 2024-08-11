@@ -1,4 +1,3 @@
-use crate::config::CLOCK_FREQ;
 use crate::sbi::set_timer;
 use riscv::register::time;
 
@@ -24,7 +23,9 @@ pub fn get_timeval() -> TimeVal {
     let now = get_time();
 
     let sec = (time_to_ms(now) / 1000) as u64;
-    let usec = (now * 1000 / (CLOCK_FREQ / 1000)) as u64;
+
+    // TODO: IS THIS RIGHT?
+    let usec = (now * 1000 / (10000000 / 1000)) as u64;
 
     TimeVal { sec, usec }
 }
@@ -40,10 +41,12 @@ pub fn get_time_ms() -> usize {
 
 #[inline]
 pub fn time_to_ms(time: usize) -> usize {
-    time / (CLOCK_FREQ / MSEC_PER_SEC)
+
+    // TODO: IS THIS RIGHT?
+    time / (10000000 / MSEC_PER_SEC)
 }
 
 pub fn set_next_trigger() {
     // 10ms
-    set_timer(get_time() + CLOCK_FREQ / 100);
+    set_timer(get_time() + 10000000 / 100);
 }
