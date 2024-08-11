@@ -19,3 +19,8 @@ test_close.txt
 test_mmap.txt
 
 os/src/link_app.S
+
+**/bin
+**/obj
+
+*.sln
