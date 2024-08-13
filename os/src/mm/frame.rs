@@ -1,5 +1,6 @@
 use alloc::{collections::VecDeque, vec::Vec};
 use lazy_static::lazy_static;
+use log::debug;
 
 use crate::{boards::get_board, sync::UPSafeCell};
 
@@ -21,12 +22,16 @@ pub fn init() {
         fn ekernel();
     }
 
+    debug!("frame: init");
+
     let board = get_board();
 
     FRAME_ALLOCATOR.exclusive_access().init(
         PhysAddr::from(ekernel as usize).ceil(),
         PhysAddr::from(0x8800_0000).floor(),
     );
+
+    debug!("frame: init end, range: [{:#x}, {:#x})", ekernel as usize, 0x8800_0000);
 }
 
 pub fn init_memory_end(end: usize) {
