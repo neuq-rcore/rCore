@@ -42,6 +42,7 @@ mod syscall;
 mod task;
 mod timer;
 mod trap;
+mod ext4;
 
 #[no_mangle]
 fn main() {
