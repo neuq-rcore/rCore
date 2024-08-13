@@ -147,6 +147,6 @@ impl StackedFrameAllocator {
     }
 
     pub fn set_end_page_num(&mut self, end_page_num: PhysPageNum) {
-        self.end_page_num = end_page_num;
+        self.end_page_num = end_page_num.0;
     }
 }
