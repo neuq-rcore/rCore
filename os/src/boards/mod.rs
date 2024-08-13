@@ -64,18 +64,31 @@ fn init_board() -> Arc<dyn IBoard> {
 
 fn human_friendly_hz(mut hz: u64) -> String {
     let mut unit = 0;
-
-    // Don't think we should consider CPUs that has a frequency higher than 1000 GHz
     let units = ["Hz", "KHz", "MHz", "GHz"];
 
-    // Multiply by 100 to avoid losing precision
-    while hz >= 100 * 1000 && unit < units.len() - 1 {
-        hz = (hz + 5) / 10; // Round to nearest
+    while hz >= 100_000 && unit < units.len() - 1 {
+        hz /= 1000;
         unit += 1;
     }
 
-    let integer = hz / 100;
-    let fractional = hz % 100;
+    let mut carry = false;
+
+    let integer = match hz > 1000 {
+        true => {
+            carry = true;
+            hz / 1000
+        }
+        false => hz,
+    };
+
+    let fractional = match carry {
+        true => hz - integer * 1000,
+        false => hz - integer,
+    };
+
+    if carry {
+        unit += 1;
+    }
 
     format!("{}.{:02} {}", integer, fractional, units[unit])
 }
