@@ -20,7 +20,7 @@ def scan_licenses(thirdparty_dir):
 
         # 扫描目录根目录下的文件，查找包含 "LICENSE" 字样的文件
         for file_name in os.listdir(dir_path):
-            if "LICENSE" in file_name.upper():
+            if "LICENSE" in file_name.upper() or "LICENCE" in file_name.upper():
                 file_path = os.path.join(dir_path, file_name)
 
                 file_name = os.path.basename(file_path)
