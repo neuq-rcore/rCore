@@ -1,9 +1,13 @@
 mod vf2;
 mod virt;
 
+use core::arch::asm;
+
 use alloc::{boxed::Box, string::String, sync::Arc};
 use log::info;
 use riscv::register::mimpid;
+
+use crate::timer;
 
 static mut BOARD: Option<Arc<dyn IBoard>> = None;
 
@@ -14,9 +18,20 @@ pub trait IBoard {
     fn mmio(&self) -> &[(usize, usize)];
     fn memory_end(&self) -> usize;
 
-    fn get_board_tick(&self) -> usize;
+    fn get_board_tick(&self) -> usize {
+        timer::get_time()
+    }
 
-    fn sleep(&self, ms: usize);
+    fn sleep(&self, ms: usize) {
+        let start = self.get_board_tick();
+        let end = start + ms * self.board_clock_freq() as usize / 1000;
+
+        while self.get_board_tick() < end {
+            unsafe {
+                asm!("nop");
+            }
+        }
+    }
 
     fn bus0(&self) -> usize;
     fn bus_width(&self) -> usize;
