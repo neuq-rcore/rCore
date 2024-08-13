@@ -30,6 +30,7 @@ mod allocation;
 mod boards;
 mod config;
 mod driver;
+mod ext4;
 mod fat32;
 mod fs;
 mod lang_items;
@@ -42,7 +43,6 @@ mod syscall;
 mod task;
 mod timer;
 mod trap;
-mod ext4;
 
 #[no_mangle]
 fn main() {
