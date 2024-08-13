@@ -43,6 +43,8 @@ pub fn init_memory_end(end: usize) {
     FRAME_ALLOCATOR
         .exclusive_access()
         .set_end_page_num(PhysAddr::from(end).floor());
+
+    debug!("frame: init_memory_end, end: {:#x}", end);
 }
 
 pub struct TrackedFrame {
