@@ -51,6 +51,12 @@ pub fn sys_nanosleep(req: *mut TimeVal, _rem: *mut TimeVal) -> isize {
                 }
             }
 
+            // let assertion = Arc::new(move || {
+            //     TODO: spin until time is up
+            // });
+            // add_to_waiting(current_task().unwrap(), assertion);
+            // suspend_current_and_run_next();
+
             0
         }
     }
@@ -305,6 +311,7 @@ pub fn sys_brk(brk: usize) -> isize {
         return old_brk as isize;
     }
 
+    // todo: implement heap
     inner.heap_pos = brk;
 
     brk as isize
