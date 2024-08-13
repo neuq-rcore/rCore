@@ -1,3 +1,4 @@
+use crate::boards::get_board;
 use crate::fs::get_fs;
 use crate::mm::page::PageTable;
 use crate::task::TaskManager::add_to_waiting;
@@ -43,19 +44,31 @@ pub fn sys_nanosleep(req: *mut TimeVal, _rem: *mut TimeVal) -> isize {
                 "Requested sleep, sec: {}, usec: {}",
                 req_time.sec, req_time.usec
             );
-            let loopcount = CLOCK_FREQ * req_time.sec as usize;
 
-            for _ in 0..loopcount {
-                unsafe {
-                    asm!("nop");
-                }
-            }
+            // let loopcount = CLOCK_FREQ * req_time.sec as usize;
 
-            // let assertion = Arc::new(move || {
-            //     TODO: spin until time is up
-            // });
-            // add_to_waiting(current_task().unwrap(), assertion);
-            // suspend_current_and_run_next();
+            // for _ in 0..loopcount {
+            //     unsafe {
+            //         asm!("nop");
+            //     }
+            // }
+
+            let board = get_board();
+
+            let ms = (req_time.sec * 1000) + (req_time.usec / 1000);
+
+            let end_ms = board.get_board_time_ms() + ms as usize;
+            let predicate = Arc::new(move || {
+                let now_ms = board.get_board_time_ms();
+
+                now_ms >= end_ms
+            });
+
+            add_to_waiting(current_task().unwrap(), predicate);
+            suspend_current_and_run_next();
+
+            // Fallback solution
+            // board.sleep(ms as usize);
 
             0
         }
