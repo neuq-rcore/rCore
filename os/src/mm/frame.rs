@@ -26,16 +26,23 @@ pub fn init() {
 
     let board = get_board();
 
+    const TEMP_MEM_END: usize = 0x8800_0000;
+
     FRAME_ALLOCATOR.exclusive_access().init(
         PhysAddr::from(ekernel as usize).ceil(),
-        PhysAddr::from(0x8800_0000).floor(),
+        PhysAddr::from(TEMP_MEM_END).floor(),
     );
 
-    debug!("frame: init end, range: [{:#x}, {:#x})", ekernel as usize, 0x8800_0000);
+    debug!(
+        "frame: init end, range: [{:#x}, {:#x})",
+        ekernel as usize, TEMP_MEM_END
+    );
 }
 
 pub fn init_memory_end(end: usize) {
-    FRAME_ALLOCATOR.exclusive_access().set_end_page_num(PhysAddr::from(end).floor());
+    FRAME_ALLOCATOR
+        .exclusive_access()
+        .set_end_page_num(PhysAddr::from(end).floor());
 }
 
 pub struct TrackedFrame {
