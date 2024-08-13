@@ -3,7 +3,7 @@ use core::mem::forget;
 use virtio_drivers::Hal;
 
 use crate::{
-    config::MEMORY_END,
+    boards::get_board,
     mm::{
         frame::{frame_alloc_contiguous, frame_dealloc_contiguous},
         PhysAddr, KERNEL_SPACE,
@@ -58,10 +58,11 @@ unsafe impl Hal for VirtioHal {
         buffer: core::ptr::NonNull<[u8]>,
         _direction: virtio_drivers::BufferDirection,
     ) -> virtio_drivers::PhysAddr {
+        let board = get_board();
         let va = buffer.as_ptr() as *mut u8 as usize;
 
         match va {
-            0..=MEMORY_END => va, // fast path for identity mapping
+            _ if va < board.memory_end() => va,
             _ => {
                 let pa = KERNEL_SPACE.shared_access().table().translate_va(va.into());
                 match pa {

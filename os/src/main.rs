@@ -14,6 +14,7 @@
 
 use core::{arch::asm, slice};
 
+use boards::{debug_board_info, get_board};
 use log::{debug, info, warn};
 use sbi::shutdown;
 use task::{kernel_create_process, kernel_create_process_with_args};
@@ -148,24 +149,31 @@ unsafe extern "C" fn __kernel_start_main() -> ! {
     // heap initlization depends on logging
     mm::init();
 
+    kernel_init();
+
     trap::init();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
-
-    debug_env();
 
     main();
 
     shutdown(false);
 }
 
-fn debug_env() {
+fn kernel_init() {
     use crate::sbi::console::UnionConsole;
     use sbi_spec::base::impl_id;
 
+    info!(r#"                          ___  ____  "#);
+    info!(r#"  _ __   ___ _   _  __ _ / _ \/ ___|"#);
+    info!(r#" | '_ \ / _ \ | | |/ _` | | | \___ \ "#);
+    info!(r#" | | | |  __/ |_| | (_| | |_| |___) |"#);
+    info!(r#" |_| |_|\___|\__/_|\__/ |\___/|____/ "#);
+    info!(r#"                      |_|            "#);
+
     info!("Hello, world!");
 
-    debug!("SBI specification version: {0}", sbi_rt::get_spec_version());
+    info!("SBI specification version: {0}", sbi_rt::get_spec_version());
 
     let sbi_impl = sbi_rt::get_sbi_impl_id();
     let sbi_impl = match sbi_impl {
@@ -179,14 +187,23 @@ fn debug_env() {
         _ => "Unknown",
     };
 
-    debug!("SBI implementation: {0}", sbi_impl);
+    info!("SBI implementation: {0}", sbi_impl);
 
     let console_type = match UnionConsole::instance() {
         UnionConsole::Legacy(_) => "Legacy",
         UnionConsole::Dbcn(_) => "DBCN",
     };
 
-    debug!("Console type: {0}", console_type);
+    info!("Console type: {0}", console_type);
+
+    // board initialization was actually done earlier when we initialized virtual memory
+    // since we need to know the memory layout of the board
+    let board = get_board();
+
+    mm::frame::init_memory_end(board.memory_end());
+
+    // Only do this when we first initialize the board
+    debug_board_info(board.clone());
 }
 
 unsafe fn clear_bss() {

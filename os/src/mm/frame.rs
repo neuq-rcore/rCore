@@ -1,8 +1,8 @@
 use alloc::{collections::VecDeque, vec::Vec};
 use lazy_static::lazy_static;
+use log::debug;
 
-use crate::config::MEMORY_END;
-use crate::sync::UPSafeCell;
+use crate::{boards::get_board, sync::UPSafeCell};
 
 use super::address::{PhysAddr, PhysPageNum};
 
@@ -21,10 +21,30 @@ pub fn init() {
     extern "C" {
         fn ekernel();
     }
+
+    debug!("frame: init");
+
+    let board = get_board();
+
+    const TEMP_MEM_END: usize = 0x8800_0000;
+
     FRAME_ALLOCATOR.exclusive_access().init(
         PhysAddr::from(ekernel as usize).ceil(),
-        PhysAddr::from(MEMORY_END).floor(),
+        PhysAddr::from(TEMP_MEM_END).floor(),
     );
+
+    debug!(
+        "frame: init end, range: [{:#x}, {:#x})",
+        ekernel as usize, TEMP_MEM_END
+    );
+}
+
+pub fn init_memory_end(end: usize) {
+    FRAME_ALLOCATOR
+        .exclusive_access()
+        .set_end_page_num(PhysAddr::from(end).floor());
+
+    debug!("frame: init_memory_end, end: {:#x}", end);
 }
 
 pub struct TrackedFrame {
@@ -138,5 +158,9 @@ impl StackedFrameAllocator {
     pub fn init(&mut self, lhs: PhysPageNum, rhs: PhysPageNum) {
         self.curr_page_num = lhs.0;
         self.end_page_num = rhs.0;
+    }
+
+    pub fn set_end_page_num(&mut self, end_page_num: PhysPageNum) {
+        self.end_page_num = end_page_num.0;
     }
 }

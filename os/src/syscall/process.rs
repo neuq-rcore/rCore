@@ -1,4 +1,4 @@
-use crate::boards::qemu::CLOCK_FREQ;
+use crate::boards::get_board;
 use crate::fs::get_fs;
 use crate::mm::page::PageTable;
 use crate::task::TaskManager::add_to_waiting;
@@ -44,13 +44,31 @@ pub fn sys_nanosleep(req: *mut TimeVal, _rem: *mut TimeVal) -> isize {
                 "Requested sleep, sec: {}, usec: {}",
                 req_time.sec, req_time.usec
             );
-            let loopcount = CLOCK_FREQ * req_time.sec as usize;
 
-            for _ in 0..loopcount {
-                unsafe {
-                    asm!("nop");
-                }
-            }
+            // let loopcount = CLOCK_FREQ * req_time.sec as usize;
+
+            // for _ in 0..loopcount {
+            //     unsafe {
+            //         asm!("nop");
+            //     }
+            // }
+
+            let board = get_board();
+
+            let ms = (req_time.sec * 1000) + (req_time.usec / 1000);
+
+            let end_ms = board.get_board_time_ms() + ms as usize;
+            let predicate = Arc::new(move || {
+                let now_ms = get_board().get_board_time_ms();
+
+                now_ms >= end_ms
+            });
+
+            add_to_waiting(current_task().unwrap(), predicate);
+            suspend_current_and_run_next();
+
+            // Fallback solution
+            // board.sleep(ms as usize);
 
             0
         }
@@ -306,6 +324,7 @@ pub fn sys_brk(brk: usize) -> isize {
         return old_brk as isize;
     }
 
+    // todo: implement heap
     inner.heap_pos = brk;
 
     brk as isize
