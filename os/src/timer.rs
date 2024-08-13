@@ -41,7 +41,6 @@ pub fn get_time_ms() -> usize {
 
 #[inline]
 pub fn time_to_ms(time: usize) -> usize {
-
     // TODO: IS THIS RIGHT?
     time / (10000000 / MSEC_PER_SEC)
 }

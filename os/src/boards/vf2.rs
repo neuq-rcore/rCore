@@ -25,7 +25,7 @@ impl IBoard for VF2Board {
     fn mmio(&self) -> &[(usize, usize)] {
         &[
             (0x1601_0000, 0x1_0000 * 2), // Currently only cover SD card
-            // TODO
+                                         // TODO
         ]
     }
 
@@ -42,4 +42,3 @@ impl IBoard for VF2Board {
         0x1_0000
     }
 }
-

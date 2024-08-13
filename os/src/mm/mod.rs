@@ -4,7 +4,9 @@ pub mod heap;
 pub mod page;
 
 use crate::{
-    boards::get_board, config::{TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE}, sync::UPSafeCell
+    boards::get_board,
+    config::{TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE},
+    sync::UPSafeCell,
 };
 use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
 use core::{arch::asm, ops::Range, str};

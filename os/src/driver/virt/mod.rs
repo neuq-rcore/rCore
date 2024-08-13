@@ -60,7 +60,7 @@ unsafe impl Hal for VirtioHal {
     ) -> virtio_drivers::PhysAddr {
         let board = get_board();
         let va = buffer.as_ptr() as *mut u8 as usize;
-        
+
         match va {
             _ if va < board.memory_end() => va,
             _ => {
