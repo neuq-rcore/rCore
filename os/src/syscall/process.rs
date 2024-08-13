@@ -59,7 +59,7 @@ pub fn sys_nanosleep(req: *mut TimeVal, _rem: *mut TimeVal) -> isize {
 
             let end_ms = board.get_board_time_ms() + ms as usize;
             let predicate = Arc::new(move || {
-                let now_ms = board.get_board_time_ms();
+                let now_ms = get_board().get_board_time_ms();
 
                 now_ms >= end_ms
             });
