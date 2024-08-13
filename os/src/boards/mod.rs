@@ -14,13 +14,20 @@ pub trait IBoard {
     fn mmio(&self) -> &[(usize, usize)];
     fn memory_end(&self) -> usize;
 
-    fn get_board_time_ms(&self);
+    fn get_board_tick(&self) -> usize;
+    
     fn sleep(&self, ms: usize);
-
+    
     fn bus0(&self) -> usize;
     fn bus_width(&self) -> usize;
+    
+    fn mmc_driver(&self, device_id: usize) -> usize {
+        self.bus0() + device_id * self.bus_width()
+    }
 
-    fn mmc_driver(&self, device_id: usize) -> crate::fat32::Fat32IO;
+    fn get_board_time_ms(&self) -> usize {
+        (self.get_board_tick() * 1000 / self.board_clock_freq() as usize)
+    }
 }
 
 fn init_board() -> Arc<dyn IBoard> {
@@ -77,7 +84,7 @@ fn debug_board_info(board: Arc<dyn IBoard>) {
     }
 }
 
-pub fn board() -> Arc<dyn IBoard> {
+pub fn get_board() -> Arc<dyn IBoard> {
     match unsafe { BOARD.as_ref() } {
         None => unsafe {
             let board = init_board();
