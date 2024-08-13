@@ -1,4 +1,4 @@
-use crate::sbi::set_timer;
+use crate::{boards::get_board, sbi::set_timer};
 use riscv::register::time;
 
 const MSEC_PER_SEC: usize = 1000;
@@ -20,14 +20,18 @@ impl TimeVal {
 }
 
 pub fn get_timeval() -> TimeVal {
-    let now = get_time();
+    let board = get_board();
 
-    let sec = (time_to_ms(now) / 1000) as u64;
+    let tick = board.get_board_tick();
+    let freq = board.board_clock_freq() as usize;
 
-    // TODO: IS THIS RIGHT?
-    let usec = (now * 1000 / (10000000 / 1000)) as u64;
+    let sec = tick / freq;
+    let usec = (tick % freq) * 1_000_000 / freq;
 
-    TimeVal { sec, usec }
+    TimeVal {
+        sec: sec as u64,
+        usec: usec as u64,
+    }
 }
 
 #[inline]
@@ -35,17 +39,31 @@ pub fn get_time() -> usize {
     time::read()
 }
 
-pub fn get_time_ms() -> usize {
-    time_to_ms(get_time())
+#[inline]
+pub fn get_tick() -> usize {
+    get_board().get_board_tick()
 }
 
 #[inline]
-pub fn time_to_ms(time: usize) -> usize {
-    // TODO: IS THIS RIGHT?
-    time / (10000000 / MSEC_PER_SEC)
+pub fn get_time_ms() -> usize {
+    get_board().get_board_time_ms()
+}
+
+#[inline]
+pub fn tick_to_ms(tick: usize) -> usize {
+    let freq = get_board().board_clock_freq() as usize;
+    tick * MSEC_PER_SEC / freq
+}
+
+#[inline]
+pub fn ms_to_tick(ms: usize) -> usize {
+    let freq = get_board().board_clock_freq() as usize;
+    ms * freq / MSEC_PER_SEC
 }
 
 pub fn set_next_trigger() {
     // 10ms
-    set_timer(get_time() + 10000000 / 100);
+    let time = get_time_ms() + 10;
+    let tick = ms_to_tick(time);
+    set_timer(tick);
 }
