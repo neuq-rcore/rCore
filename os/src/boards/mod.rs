@@ -80,7 +80,7 @@ fn human_friendly_hz(mut hz: u64) -> String {
     format!("{}.{:02} {}", integer, fractional, units[unit])
 }
 
-fn debug_board_info(board: Arc<dyn IBoard>) {
+pub fn debug_board_info(board: Arc<dyn IBoard>) {
     info!("Board: {}", board.board_name());
 
     // Used to identify the machine implementation
@@ -104,8 +104,6 @@ pub fn get_board() -> Arc<dyn IBoard> {
         None => unsafe {
             let board = init_board();
             BOARD = Some(board.clone());
-            // Only do this when we first initialize the board
-            debug_board_info(board.clone());
 
             board
         },

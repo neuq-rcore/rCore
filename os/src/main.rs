@@ -14,7 +14,7 @@
 
 use core::{arch::asm, slice};
 
-use boards::get_board;
+use boards::{debug_board_info, get_board};
 use log::{debug, info, warn};
 use sbi::shutdown;
 use task::{kernel_create_process, kernel_create_process_with_args};
@@ -196,8 +196,12 @@ fn kernel_init() {
 
     info!("Console type: {0}", console_type);
 
-    // board initialization
-    let _ = get_board();
+    // board initialization was actually done earlier when we initialized virtual memory
+    // since we need to know the memory layout of the board
+    let board = get_board();
+
+    // Only do this when we first initialize the board
+    debug_board_info(board.clone());
 }
 
 unsafe fn clear_bss() {
