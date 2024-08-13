@@ -149,11 +149,11 @@ unsafe extern "C" fn __kernel_start_main() -> ! {
     // heap initlization depends on logging
     mm::init();
 
+    kernel_init();
+
     trap::init();
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
-
-    kernel_init();
 
     main();
 
