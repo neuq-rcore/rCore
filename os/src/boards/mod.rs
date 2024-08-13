@@ -84,8 +84,8 @@ pub fn debug_board_info(board: Arc<dyn IBoard>) {
     info!("Board: {}", board.board_name());
 
     // Used to identify the machine implementation
-    let mimpid = mimpid::read().map(|id| id.bits()).unwrap_or(0);
-    info!("Mimpid: {:#x}", mimpid);
+    // let mimpid = mimpid::read().map(|id| id.bits()).unwrap_or(0);
+    // info!("Mimpid: {:#x}", mimpid);
 
     let freq = board.board_clock_freq();
     let freq = human_friendly_hz(freq);
