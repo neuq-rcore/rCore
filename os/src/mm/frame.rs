@@ -1,7 +1,7 @@
 use alloc::{collections::VecDeque, vec::Vec};
 use lazy_static::lazy_static;
 
-use crate::sync::UPSafeCell;
+use crate::{boards::get_board, sync::UPSafeCell};
 
 use super::address::{PhysAddr, PhysPageNum};
 
@@ -20,9 +20,12 @@ pub fn init() {
     extern "C" {
         fn ekernel();
     }
+
+    let board = get_board();
+
     FRAME_ALLOCATOR.exclusive_access().init(
         PhysAddr::from(ekernel as usize).ceil(),
-        PhysAddr::from(MEMORY_END).floor(),
+        PhysAddr::from(board.memory_end()).floor(),
     );
 }
 
