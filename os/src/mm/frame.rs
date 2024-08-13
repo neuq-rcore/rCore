@@ -25,8 +25,12 @@ pub fn init() {
 
     FRAME_ALLOCATOR.exclusive_access().init(
         PhysAddr::from(ekernel as usize).ceil(),
-        PhysAddr::from(board.memory_end()).floor(),
+        PhysAddr::from(0x8800_0000).floor(),
     );
+}
+
+pub fn init_memory_end(end: usize) {
+    FRAME_ALLOCATOR.exclusive_access().set_end_page_num(PhysAddr::from(end).floor());
 }
 
 pub struct TrackedFrame {
@@ -140,5 +144,9 @@ impl StackedFrameAllocator {
     pub fn init(&mut self, lhs: PhysPageNum, rhs: PhysPageNum) {
         self.curr_page_num = lhs.0;
         self.end_page_num = rhs.0;
+    }
+
+    pub fn set_end_page_num(&mut self, end_page_num: PhysPageNum) {
+        self.end_page_num = end_page_num;
     }
 }

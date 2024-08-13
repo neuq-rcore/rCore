@@ -200,6 +200,8 @@ fn kernel_init() {
     // since we need to know the memory layout of the board
     let board = get_board();
 
+    mm::frame::init_memory_end(board.memory_end());
+
     // Only do this when we first initialize the board
     debug_board_info(board.clone());
 }
