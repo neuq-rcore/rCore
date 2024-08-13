@@ -14,6 +14,7 @@
 
 use core::{arch::asm, slice};
 
+use boards::get_board;
 use log::{debug, info, warn};
 use sbi::shutdown;
 use task::{kernel_create_process, kernel_create_process_with_args};
@@ -152,14 +153,14 @@ unsafe extern "C" fn __kernel_start_main() -> ! {
     trap::enable_timer_interrupt();
     timer::set_next_trigger();
 
-    debug_env();
+    kernel_init();
 
     main();
 
     shutdown(false);
 }
 
-fn debug_env() {
+fn kernel_init() {
     use crate::sbi::console::UnionConsole;
     use sbi_spec::base::impl_id;
 
@@ -196,7 +197,7 @@ fn debug_env() {
     info!("Console type: {0}", console_type);
 
     // board initialization
-    // let _ = board();
+    let _ = get_board();
 }
 
 unsafe fn clear_bss() {
