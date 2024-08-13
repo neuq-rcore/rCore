@@ -15,12 +15,12 @@ pub trait IBoard {
     fn memory_end(&self) -> usize;
 
     fn get_board_tick(&self) -> usize;
-    
+
     fn sleep(&self, ms: usize);
-    
+
     fn bus0(&self) -> usize;
     fn bus_width(&self) -> usize;
-    
+
     fn mmc_driver(&self, device_id: usize) -> usize {
         self.bus0() + device_id * self.bus_width()
     }
