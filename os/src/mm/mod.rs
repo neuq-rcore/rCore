@@ -4,8 +4,7 @@ pub mod heap;
 pub mod page;
 
 use crate::{
-    config::{TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE},
-    sync::UPSafeCell,
+    boards::get_board, config::{TRAMPOLINE, TRAP_CONTEXT, USER_STACK_SIZE}, sync::UPSafeCell
 };
 use alloc::{collections::BTreeMap, sync::Arc, vec::Vec};
 use core::{arch::asm, ops::Range, str};
@@ -339,14 +338,20 @@ impl KernelSpace {
             Option::None,
         );
 
+        let board = get_board();
+
+        let memory_end = board.memory_end();
+
+        let mmio = board.mmio();
+
         debug!(
             "Mapping physical memory, 0x{:08X}..0x{:08X}",
-            ekernel as usize, MEMORY_END
+            ekernel as usize, memory_end
         );
         kernel_space.push(
             MapArea::new(
                 VirtAddr(ekernel as usize),
-                VirtAddr(MEMORY_END),
+                VirtAddr(memory_end),
                 MapType::Identical,
                 MapPermission::R | MapPermission::W,
             ),
@@ -354,7 +359,7 @@ impl KernelSpace {
         );
 
         debug!("Mapping memory-mapped registers");
-        for &(start, len) in MMIO {
+        for &(start, len) in mmio {
             debug!("Mapping MMIO: start: 0x{:08X}, len: 0x{:08X}", start, len);
             kernel_space.push(
                 MapArea::new(
