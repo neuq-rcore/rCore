@@ -14,8 +14,9 @@ virtio-drivers = "0.7.2"
 buddy_system_allocator = { git = "https://github.com/neuq-rcore/buddy_system_allocator" }
 bitflags = "2.5.0"
 xmas-elf = { git = "https://github.com/nrc/xmas-elf.git" }
-visionfive2-sd = { git = "https://github.com/neuq-rcore/visionfive2-sd.git" }
-ext4_rs = { git = "https://github.com/neuq-rcore/ext4_rs" }
+bitfield-struct = "0.8.0"
+visionfive2-sd = { git = "https://github.com/os-module/visionfive2-sd.git" }
+ext4_rs = { git = "https://github.com/neuq-rcore/ext4_rs" } 
 
 [profile.release]
 debug = true
