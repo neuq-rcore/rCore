@@ -5,8 +5,8 @@ use fatfs::Write;
 use log::info;
 use log::warn;
 
-use crate::fs::get_fs;
-use crate::fs::inode::{FileDescriptor, FileType, OpenFlags};
+use crate::fs_fat32::get_fs;
+use crate::fs_fat32::inode::{FileDescriptor, FileType, OpenFlags};
 use crate::task::processor::{current_task, current_user_token};
 
 use super::sys_yield;

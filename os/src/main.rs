@@ -19,7 +19,7 @@ use log::{debug, info, warn};
 use sbi::shutdown;
 use task::{kernel_create_process, kernel_create_process_with_args};
 
-use crate::fs::get_fs;
+use crate::fs_fat32::get_fs;
 
 #[macro_use]
 extern crate alloc;
@@ -32,7 +32,7 @@ mod config;
 mod driver;
 mod ext4;
 mod fat32;
-mod fs;
+mod fs_fat32;
 mod lang_items;
 mod logging;
 mod mm;

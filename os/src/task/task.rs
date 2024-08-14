@@ -8,7 +8,7 @@ use alloc::sync::Weak;
 use alloc::vec::Vec;
 use log::info;
 
-use crate::fs::inode::FileDescriptor;
+use crate::fs_fat32::inode::FileDescriptor;
 use crate::mm::address::VirtAddr;
 
 use crate::mm::page::PageTable;

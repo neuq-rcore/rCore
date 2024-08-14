@@ -1,5 +1,5 @@
 use crate::boards::get_board;
-use crate::fs::get_fs;
+use crate::fs_fat32::get_fs;
 use crate::mm::page::PageTable;
 use crate::task::TaskManager::add_to_waiting;
 use crate::trap::{disable_timer_interrupt, enable_timer_interrupt};
