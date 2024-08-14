@@ -27,9 +27,7 @@ pub trait IBoard {
         let end = start + ms * self.board_clock_freq() as usize / 1000;
 
         while self.get_board_tick() < end {
-            unsafe {
-                asm!("nop");
-            }
+            core::hint::spin_loop();
         }
     }
 
