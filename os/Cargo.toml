@@ -15,7 +15,9 @@ buddy_system_allocator = { git = "https://github.com/neuq-rcore/buddy_system_all
 bitflags = "2.5.0"
 xmas-elf = { git = "https://github.com/nrc/xmas-elf.git" }
 bitfield-struct = "0.8.0"
-visionfive2-sd = { git = "https://github.com/os-module/visionfive2-sd.git" }
+# bit-struct = "0.3.2"
+# byte-slice-cast = "1.2.2"
+# visionfive2-sd = { git = "https://github.com/os-module/visionfive2-sd.git" }
 ext4_rs = { git = "https://github.com/neuq-rcore/ext4_rs" } 
 
 [profile.release]
