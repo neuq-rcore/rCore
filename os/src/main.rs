@@ -32,6 +32,7 @@ mod config;
 mod driver;
 mod ext4;
 mod fat32;
+mod fs_ext4;
 mod fs_fat32;
 mod lang_items;
 mod logging;
