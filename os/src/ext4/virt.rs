@@ -1,7 +1,10 @@
 use core::ptr::NonNull;
 
 use alloc::boxed::Box;
-use virtio_drivers::{device::blk::VirtIOBlk, transport::mmio::{MmioTransport, VirtIOHeader}};
+use virtio_drivers::{
+    device::blk::VirtIOBlk,
+    transport::mmio::{MmioTransport, VirtIOHeader},
+};
 
 use crate::{boards::get_board, driver::virt::VirtioHal, sync::UPSafeCell};
 

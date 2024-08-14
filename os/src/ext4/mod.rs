@@ -7,14 +7,12 @@ pub mod driver;
 pub mod virt;
 
 pub struct Ext4Filesystem {
-    driver: Box<dyn IExt4Driver>
+    driver: Box<dyn IExt4Driver>,
 }
 
 impl Ext4Filesystem {
     pub fn new(driver: Box<dyn IExt4Driver>) -> Self {
-        Self {
-            driver
-        }
+        Self { driver }
     }
 }
 
@@ -33,4 +31,3 @@ impl BlockDevice for Ext4Filesystem {
         self.driver.write_blocks(offset, data);
     }
 }
-
