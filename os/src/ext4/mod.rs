@@ -4,8 +4,8 @@ use ext4_rs::BlockDevice;
 
 pub mod driver;
 
-pub mod virt;
 pub mod vf2;
+pub mod virt;
 
 pub struct Ext4Filesystem {
     driver: Box<dyn IExt4Driver>,
