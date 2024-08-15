@@ -131,6 +131,8 @@ make run LOG=<level>
 
 MIT
 
+[第三方许可声明](./thirdpartylegalnotices.md)
+
 ## 联系我们
 
 如若有问题欢迎与本团队联系，我们会在第一时间给您回复，邮箱 [cai1hsu@outlook.com](mailto:cai1hsu@outlook.com) ，欢迎您踊跃参与。
